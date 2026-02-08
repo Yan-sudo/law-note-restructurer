@@ -3,15 +3,44 @@ import { z } from "zod";
 const optionalString = z.string().optional();
 const optionalNumber = z.number().optional();
 
+// ============================================================
+// Enum helpers — Sets used by normalisation, schemas by Zod
+// ============================================================
+
+const VALID_CATEGORIES = new Set([
+    "doctrine", "rule", "standard", "defense", "remedy", "procedure", "other",
+]);
+
+const VALID_REL_TYPES = new Set([
+    "establishes", "applies", "modifies", "distinguishes", "overrules", "illustrates",
+]);
+
+const VALID_STRENGTHS = new Set([
+    "primary", "secondary", "tangential",
+]);
+
+const categorySchema = z.enum([
+    "doctrine", "rule", "standard", "defense", "remedy", "procedure", "other",
+]);
+
+const relTypeSchema = z.enum([
+    "establishes", "applies", "modifies", "distinguishes", "overrules", "illustrates",
+]);
+
+const strengthSchema = z.enum([
+    "primary", "secondary", "tangential",
+]);
+
+// ============================================================
+// Entity schemas
+// ============================================================
+
 export const LegalConceptSchema = z.object({
     id: z.string(),
     name: z.string(),
     nameChinese: optionalString,
     definition: z.string(),
-    category: z.enum([
-        "doctrine", "rule", "standard", "defense",
-        "remedy", "procedure", "other",
-    ]),
+    category: categorySchema,
     sourceReferences: z.array(z.string()),
 });
 
@@ -67,12 +96,9 @@ export const ExtractedEntitiesSchema = z.object({
 export const RelationshipEntrySchema = z.object({
     caseId: z.string(),
     conceptId: z.string(),
-    relationshipType: z.enum([
-        "establishes", "applies", "modifies",
-        "distinguishes", "overrules", "illustrates",
-    ]),
+    relationshipType: relTypeSchema,
     description: z.string(),
-    strength: z.enum(["primary", "secondary", "tangential"]),
+    strength: strengthSchema,
 });
 
 export const RelationshipMatrixSchema = z.object({
@@ -82,24 +108,14 @@ export const RelationshipMatrixSchema = z.object({
 });
 
 // ============================================================
-// DATA NORMALIZATION (run BEFORE Zod validation)
+// DATA NORMALIZATION (run BEFORE Zod validation as extra safety)
 // ============================================================
-
-const VALID_CATEGORIES = new Set([
-    "doctrine", "rule", "standard", "defense", "remedy", "procedure", "other",
-]);
-
-const VALID_REL_TYPES = new Set([
-    "establishes", "applies", "modifies", "distinguishes", "overrules", "illustrates",
-]);
-
-const VALID_STRENGTHS = new Set(["primary", "secondary", "tangential"]);
 
 function normalizeCategory(value: unknown): string {
     if (typeof value !== "string") return "other";
     const lower = value.toLowerCase().trim();
     if (VALID_CATEGORIES.has(lower)) return lower;
-    if (lower.includes("concept") || lower === "legal concept") return "doctrine";
+    if (lower.includes("concept")) return "doctrine";
     if (lower.includes("exception")) return "defense";
     return "other";
 }
@@ -108,7 +124,16 @@ function nullToUndefined(obj: Record<string, unknown>): void {
     for (const key of Object.keys(obj)) {
         if (obj[key] === null) {
             delete obj[key];
+        } else if (Array.isArray(obj[key])) {
+            // Filter null elements from arrays
+            obj[key] = (obj[key] as unknown[]).filter((v) => v !== null);
         }
+    }
+    // Coerce string year to number if present
+    if (typeof obj.year === "string") {
+        const n = Number(obj.year);
+        if (!isNaN(n)) obj.year = n;
+        else delete obj.year;
     }
 }
 
