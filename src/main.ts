@@ -2,6 +2,7 @@ import { Notice, Plugin } from "obsidian";
 import { DEFAULT_SETTINGS, type LawNoteSettings } from "./types";
 import { LawNoteSettingTab } from "./settings";
 import { PipelineOrchestrator } from "./pipeline/pipeline-orchestrator";
+import { runLinkResolver } from "./link-resolver/resolver-orchestrator";
 
 export default class LawNoteRestructurerPlugin extends Plugin {
     settings: LawNoteSettings = DEFAULT_SETTINGS;
@@ -22,6 +23,12 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             id: "extract-entities-only",
             name: "Extract Legal Entities Only (仅提取实体)",
             callback: () => this.startPipeline("entity-extract"),
+        });
+
+        this.addCommand({
+            id: "resolve-unresolved-links",
+            name: "Resolve Unresolved Links (解析未解析链接)",
+            callback: () => runLinkResolver(this.app, this.settings),
         });
     }
 

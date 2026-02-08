@@ -228,3 +228,103 @@
     margin: 8px 0;
     color: var(--text-muted);
 }
+
+/* Link Review Modal */
+.law-restructurer-link-review {
+    max-height: 80vh;
+    overflow-y: auto;
+    min-width: 550px;
+}
+
+.law-restructurer-link-list {
+    max-height: 45vh;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 4px;
+    margin-bottom: 12px;
+}
+
+.law-restructurer-link-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.law-restructurer-link-item:hover {
+    background: var(--background-secondary);
+}
+
+.law-restructurer-link-item input[type="checkbox"] {
+    margin-top: 4px;
+    flex-shrink: 0;
+}
+
+.law-restructurer-link-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.law-restructurer-link-text {
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.law-restructurer-link-meta {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 2px;
+    flex-wrap: wrap;
+}
+
+.law-restructurer-link-refs {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.law-restructurer-link-confidence {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.law-restructurer-link-item details {
+    flex-shrink: 0;
+}
+
+.law-restructurer-link-item details > summary {
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 2px 4px;
+}
+
+/* Category badges for link resolver */
+.law-restructurer-badge-us-case {
+    background: rgba(0, 120, 255, 0.15);
+    color: var(--text-normal);
+}
+
+.law-restructurer-badge-us-statute {
+    background: rgba(0, 180, 0, 0.15);
+    color: var(--text-normal);
+}
+
+.law-restructurer-badge-cn-law {
+    background: rgba(255, 165, 0, 0.15);
+    color: var(--text-normal);
+}
+
+.law-restructurer-badge-cn-case {
+    background: rgba(128, 0, 128, 0.15);
+    color: var(--text-normal);
+}
+
+.law-restructurer-badge-unknown {
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}

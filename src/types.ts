@@ -11,6 +11,11 @@ export interface LawNoteSettings {
     enableStreaming: boolean;
     enableSourceFootnotes: boolean;
     appendToExisting: boolean;
+    // Link Resolver settings
+    courtListenerApiToken: string;
+    resolvedLinksFolder: string;
+    resolverRequestDelayMs: number;
+    resolverScanScope: "vault" | "output-folder";
 }
 
 export const DEFAULT_SETTINGS: LawNoteSettings = {
@@ -22,6 +27,10 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     enableStreaming: true,
     enableSourceFootnotes: true,
     appendToExisting: true,
+    courtListenerApiToken: "",
+    resolvedLinksFolder: "",
+    resolverRequestDelayMs: 1500,
+    resolverScanScope: "output-folder",
 };
 
 // ============================================================

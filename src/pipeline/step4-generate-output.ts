@@ -14,6 +14,7 @@ import type {
     RelationshipMatrix,
 } from "../types";
 import { normalizeConceptName } from "../types";
+import { ensureFolderExists } from "../utils/vault-helpers";
 
 // ============================================================
 // Source section markers — invisible in Obsidian reading mode
@@ -42,29 +43,6 @@ function splitFrontmatter(content: string): [string, string] {
         return [match[1], content.slice(match[1].length)];
     }
     return ["", content];
-}
-
-// ============================================================
-// Folder helpers
-// ============================================================
-
-async function ensureFolderExists(
-    vault: Vault,
-    folderPath: string
-): Promise<void> {
-    const parts = folderPath.split("/");
-    let currentPath = "";
-    for (const part of parts) {
-        currentPath = currentPath ? `${currentPath}/${part}` : part;
-        const existing = vault.getAbstractFileByPath(currentPath);
-        if (!existing) {
-            try {
-                await vault.createFolder(currentPath);
-            } catch {
-                // Folder may already exist
-            }
-        }
-    }
 }
 
 // ============================================================
