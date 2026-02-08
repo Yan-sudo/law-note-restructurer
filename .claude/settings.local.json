@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.courtlistener.com)",
+      "WebFetch(domain:www.law.cornell.edu)",
+      "WebFetch(domain:api.uscode.gov)",
+      "WebFetch(domain:flk.npc.gov.cn)"
+    ]
+  }
+}

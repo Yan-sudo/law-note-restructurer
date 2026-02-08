@@ -1,0 +1,9 @@
+{
+    "id": "law-note-restructurer",
+    "name": "Law Note Restructurer",
+    "version": "0.1.0",
+    "minAppVersion": "1.0.0",
+    "description": "AI-powered restructuring of legal notes into interconnected concept pages, dashboards, and outlines.",
+    "author": "yan",
+    "isDesktopOnly": true
+}

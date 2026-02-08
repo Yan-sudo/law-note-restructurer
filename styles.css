@@ -1,0 +1,230 @@
+/* ============================================
+   Law Note Restructurer - Plugin Styles
+   ============================================ */
+
+/* File Picker Modal */
+.law-restructurer-file-picker {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.law-restructurer-filter-input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+}
+
+.law-restructurer-bulk-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.law-restructurer-bulk-actions button {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.law-restructurer-file-list {
+    max-height: 40vh;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 4px;
+    margin-bottom: 12px;
+}
+
+.law-restructurer-file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.law-restructurer-file-item:hover {
+    background: var(--background-secondary);
+}
+
+.law-restructurer-file-label {
+    flex: 1;
+    font-size: 13px;
+}
+
+.law-restructurer-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.law-restructurer-badge-md {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.law-restructurer-badge-docx {
+    background: #2b579a;
+    color: white;
+}
+
+/* Progress Modal */
+.law-restructurer-progress {
+    min-width: 400px;
+}
+
+.law-restructurer-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--background-modifier-border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 12px 0;
+}
+
+.law-restructurer-progress-bar-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.law-restructurer-progress-bar-indeterminate {
+    width: 30% !important;
+    animation: law-restructurer-indeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes law-restructurer-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
+.law-restructurer-preview-area {
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: var(--font-monospace);
+    font-size: 11px;
+    padding: 8px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* Entity Review Modal */
+.law-restructurer-entity-review {
+    max-height: 80vh;
+    overflow-y: auto;
+    min-width: 500px;
+}
+
+.law-restructurer-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+}
+
+.law-restructurer-tabs button {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 4px 4px 0 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.law-restructurer-tab-active {
+    background: var(--background-secondary) !important;
+    color: var(--text-normal) !important;
+    font-weight: 600;
+}
+
+.law-restructurer-tab-content {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.law-restructurer-entity-card {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    padding: 4px;
+}
+
+.law-restructurer-entity-card summary {
+    padding: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.law-restructurer-entity-card summary:hover {
+    background: var(--background-secondary);
+    border-radius: 4px;
+}
+
+/* Relationship Matrix */
+.law-restructurer-relationship-review {
+    max-height: 80vh;
+    overflow-y: auto;
+    min-width: 600px;
+}
+
+.law-restructurer-matrix-container {
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.law-restructurer-matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.law-restructurer-matrix-table th,
+.law-restructurer-matrix-table td {
+    border: 1px solid var(--background-modifier-border);
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.law-restructurer-matrix-table th {
+    background: var(--background-secondary);
+    font-weight: 600;
+}
+
+.law-restructurer-rel-establishes { background: rgba(0, 180, 0, 0.1); }
+.law-restructurer-rel-applies { background: rgba(0, 120, 255, 0.1); }
+.law-restructurer-rel-modifies { background: rgba(255, 165, 0, 0.1); }
+.law-restructurer-rel-distinguishes { background: rgba(128, 0, 128, 0.1); }
+.law-restructurer-rel-overrules { background: rgba(255, 0, 0, 0.1); }
+.law-restructurer-rel-illustrates { background: rgba(0, 200, 200, 0.1); }
+.law-restructurer-rel-none { color: var(--text-muted); }
+
+.law-restructurer-entry-list {
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+/* Shared Button Bar */
+.law-restructurer-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.law-restructurer-summary {
+    margin: 8px 0;
+    color: var(--text-muted);
+}
