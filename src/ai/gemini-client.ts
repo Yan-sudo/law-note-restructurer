@@ -198,10 +198,11 @@ export class GeminiClient {
 
 function normalizeData(data: Record<string, unknown>): void {
     // Detect type by shape and normalize accordingly
-    if ("concepts" in data || "cases" in data) {
+    if ("concepts" in data || "cases" in data || "principles" in data || "rules" in data) {
         normalizeExtractedEntities(data);
     }
-    if ("entries" in data && "casesInOrder" in data) {
+    // Detect relationship matrix (entries alone is enough — casesInOrder may be missing from truncation)
+    if ("entries" in data && Array.isArray(data.entries)) {
         normalizeRelationshipMatrix(data);
     }
 }
@@ -222,24 +223,25 @@ function parseAndValidate<T>(raw: string, schema: z.ZodSchema<T>): T {
         console.warn("[law-restructurer] JSON parse failed, attempting repair...", firstError);
     }
 
-    // Second attempt: fix unescaped quotes/control chars
-    const sanitized = fixUnescapedQuotes(json);
+    // Second attempt: fix unescaped quotes/control chars + bad escapes
+    const sanitized = fixBadEscapes(fixUnescapedQuotes(json));
     try {
         return tryParseAndValidate(sanitized, schema);
     } catch (secondError) {
-        console.warn("[law-restructurer] Sanitized JSON failed, trying truncation repair...", secondError);
+        console.warn("[law-restructurer] Sanitized JSON failed, trying comma + truncation repair...", secondError);
     }
 
-    // Third attempt: repair truncated JSON
-    const repaired = repairTruncatedJson(sanitized);
+    // Third attempt: fix missing commas + repair truncation
+    const withCommas = fixMissingCommas(sanitized);
+    const repaired = repairTruncatedJson(withCommas);
     try {
         return tryParseAndValidate(repaired, schema);
     } catch (thirdError) {
-        console.warn("[law-restructurer] Repaired JSON also failed, trying aggressive repair...", thirdError);
+        console.warn("[law-restructurer] Comma+truncation repair failed, trying aggressive repair...", thirdError);
     }
 
-    // Fourth attempt: aggressive repair
-    const aggressiveRepaired = aggressiveRepairJson(sanitized);
+    // Fourth attempt: aggressive repair on comma-fixed version
+    const aggressiveRepaired = aggressiveRepairJson(withCommas);
     return tryParseAndValidate(aggressiveRepaired, schema);
 }
 
@@ -466,6 +468,72 @@ function fixUnescapedQuotes(json: string): string {
         }
         i++;
     }
+    return result.join("");
+}
+
+/**
+ * Fix missing commas between JSON elements.
+ * AI sometimes outputs adjacent objects/values without separating commas:
+ *   { "key": "val" }\n  { "key2": "val2" }   →  missing comma
+ *   "value"\n  "nextKey":                      →  missing comma
+ */
+function fixMissingCommas(json: string): string {
+    let result = json;
+
+    // } followed by { without comma (objects in array)
+    result = result.replace(/\}(\s*\n\s*)\{/g, "},$1{");
+
+    // ] followed by [ without comma (adjacent arrays)
+    result = result.replace(/\](\s*\n\s*)\[/g, "],$1[");
+
+    // ] followed by { without comma
+    result = result.replace(/\](\s*\n\s*)\{/g, "],$1{");
+
+    // } followed by " where " starts a new key (has : after the string)
+    result = result.replace(/\}(\s*\n\s*)"(?=(?:[^"\\]|\\.)*"\s*:)/g, '},$1"');
+
+    // "value" followed by "key": (string value then next key-value without comma)
+    result = result.replace(/"(\s*\n\s*)"(?=(?:[^"\\]|\\.)*"\s*:)/g, '",$1"');
+
+    // number/true/false/null followed by "key":
+    result = result.replace(/((?:true|false|null|\d)\s*\n\s*)"(?=(?:[^"\\]|\\.)*"\s*:)/g, '$1,$2"');
+
+    return result;
+}
+
+/**
+ * Fix invalid escape sequences inside JSON strings.
+ * AI sometimes outputs \s, \1, \p etc. which are not valid JSON escapes.
+ * Valid JSON escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+ */
+function fixBadEscapes(json: string): string {
+    const validEscapes = new Set(['"', "\\", "/", "b", "f", "n", "r", "t", "u"]);
+    const result: string[] = [];
+    let inString = false;
+
+    for (let i = 0; i < json.length; i++) {
+        const ch = json[i];
+
+        if (ch === '"' && (i === 0 || json[i - 1] !== "\\")) {
+            inString = !inString;
+            result.push(ch);
+            continue;
+        }
+
+        if (inString && ch === "\\" && i + 1 < json.length) {
+            const next = json[i + 1];
+            if (validEscapes.has(next)) {
+                // Valid escape — keep as-is
+                result.push(ch);
+            } else {
+                // Invalid escape like \s, \1, \p — double the backslash
+                result.push("\\\\");
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
     return result.join("");
 }
 
