@@ -235,25 +235,75 @@ function isCompleteEntity(obj: Record<string, unknown>, type: string): boolean {
 }
 
 export function normalizeRelationshipMatrix(data: Record<string, unknown>): void {
-    const entries = data.entries;
-    if (Array.isArray(entries)) {
-        for (const e of entries) {
-            if (e && typeof e === "object") {
-                const entry = e as Record<string, unknown>;
-                sanitizeObject(entry, []);
-                if (typeof entry.relationshipType === "string") {
-                    const lower = entry.relationshipType.toLowerCase().trim();
-                    entry.relationshipType = VALID_REL_TYPES.has(lower)
-                        ? lower
-                        : "illustrates";
-                }
-                if (typeof entry.strength === "string") {
-                    const lower = entry.strength.toLowerCase().trim();
-                    entry.strength = VALID_STRENGTHS.has(lower)
-                        ? lower
-                        : "secondary";
-                }
+    // Ensure top-level arrays exist (handles truncated JSON)
+    if (!Array.isArray(data.entries)) data.entries = [];
+    if (!Array.isArray(data.casesInOrder)) data.casesInOrder = [];
+    if (!Array.isArray(data.conceptsInOrder)) data.conceptsInOrder = [];
+
+    const entries = data.entries as unknown[];
+
+    // Remove incomplete last entry if truncated
+    if (entries.length > 0) {
+        const last = entries[entries.length - 1];
+        if (last && typeof last === "object") {
+            const obj = last as Record<string, unknown>;
+            if (!obj.caseId || !obj.conceptId) {
+                console.warn("[law-restructurer] Removing incomplete last matrix entry (likely truncated)");
+                entries.pop();
             }
         }
+    }
+
+    for (const e of entries) {
+        if (e && typeof e === "object") {
+            const entry = e as Record<string, unknown>;
+            sanitizeObject(entry, []);
+
+            // Normalize relationshipType — if AI put a strength value here, swap it
+            if (typeof entry.relationshipType === "string") {
+                const lower = entry.relationshipType.toLowerCase().trim();
+                if (VALID_REL_TYPES.has(lower)) {
+                    entry.relationshipType = lower;
+                } else if (VALID_STRENGTHS.has(lower)) {
+                    // AI confused strength with relationshipType — use as strength, default relType
+                    if (!entry.strength || !VALID_STRENGTHS.has(String(entry.strength).toLowerCase())) {
+                        entry.strength = lower;
+                    }
+                    entry.relationshipType = "illustrates";
+                } else {
+                    entry.relationshipType = "illustrates";
+                }
+            }
+
+            if (typeof entry.strength === "string") {
+                const lower = entry.strength.toLowerCase().trim();
+                entry.strength = VALID_STRENGTHS.has(lower)
+                    ? lower
+                    : "secondary";
+            }
+        }
+    }
+
+    // Auto-populate casesInOrder/conceptsInOrder from entries if missing
+    if ((data.casesInOrder as string[]).length === 0 && entries.length > 0) {
+        const caseIds = new Set<string>();
+        for (const e of entries) {
+            if (e && typeof e === "object") {
+                const id = (e as Record<string, unknown>).caseId;
+                if (typeof id === "string") caseIds.add(id);
+            }
+        }
+        data.casesInOrder = Array.from(caseIds);
+    }
+
+    if ((data.conceptsInOrder as string[]).length === 0 && entries.length > 0) {
+        const conceptIds = new Set<string>();
+        for (const e of entries) {
+            if (e && typeof e === "object") {
+                const id = (e as Record<string, unknown>).conceptId;
+                if (typeof id === "string") conceptIds.add(id);
+            }
+        }
+        data.conceptsInOrder = Array.from(conceptIds);
     }
 }
