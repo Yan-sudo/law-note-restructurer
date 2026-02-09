@@ -76,7 +76,7 @@ Links are auto-classified by pattern matching (e.g. `Marbury v. Madison` → US 
 ```bash
 # Clone into your vault's plugin folder
 # 克隆到你的仓库插件目录
-git clone <repo-url> /path/to/vault/.obsidian/plugins/law-note-restructurer
+git clone https://github.com/Yan-sudo/law-note-restructurer/path/to/vault/.obsidian/plugins/law-note-restructurer
 
 cd /path/to/vault/.obsidian/plugins/law-note-restructurer
 npm install && npm run build
