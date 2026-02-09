@@ -238,6 +238,82 @@ Principles: ${JSON.stringify(entities.principles.map((p) => ({ name: p.name, des
 Output raw markdown starting with ---. No code fences.`;
 }
 
+export function buildCombinedConceptDashboardPrompt(
+    concept: LegalConcept,
+    relatedCases: LegalCase[],
+    relatedPrinciples: LegalPrinciple[],
+    relatedRules: LegalRule[],
+    relationships: RelationshipEntry[],
+    language: "zh" | "en" | "mixed",
+    enableFootnotes: boolean,
+    sourceFiles: string[]
+): string {
+    const footnoteInstruction = enableFootnotes
+        ? `\nAfter each case subsection or rule description, add a footnote marker [^src-FILENAME].
+At the bottom, add definitions like:
+[^src-ch1]: Source: ch1.md
+[^src-ch2]: Source: ch2.docx
+Available source files: ${sourceFiles.join(", ")}`
+        : "";
+
+    const casesJson = JSON.stringify(relatedCases.map((c) => ({ name: c.name, year: c.year, facts: c.facts, holding: c.holding, significance: c.significance })));
+    const principlesJson = JSON.stringify(relatedPrinciples.map((p) => ({ name: p.name, description: p.description })));
+    const rulesJson = JSON.stringify(relatedRules.map((r) => ({ name: r.name, statement: r.statement, elements: r.elements })));
+    const relsJson = JSON.stringify(relationships.map((r) => ({ case: r.caseId, type: r.relationshipType, strength: r.strength, desc: r.description })));
+
+    return `You are a legal education assistant. Generate TWO Obsidian markdown pages for "${concept.name}".
+
+## Language
+${langInstruction(language)}
+${FORMAT_RULES}
+
+===== PAGE 1: CONCEPT PAGE =====
+
+Requirements:
+1. Start DIRECTLY with --- (YAML frontmatter). Tags: law/concept, law/${concept.category}. Aliases if nameChinese exists. Date: today.
+2. # ${concept.name}${concept.nameChinese ? ` (${concept.nameChinese})` : ""}
+3. Definition in a callout: > [!note] Definition
+4. ## Cases — for each case use ### [[Case Name]]:
+   State facts, holding, relevance. Separate bullets from paragraphs with blank lines.
+5. ## Principles — link via [[wikilinks]]
+6. ## Rules — state the rule plainly, list elements, show how to apply
+7. ## See Also — link related concepts
+${footnoteInstruction}
+
+===== PAGE 2: DASHBOARD PAGE =====
+
+Requirements:
+1. Start DIRECTLY with --- (YAML frontmatter). Tags: law/dashboard. Date: today.
+2. # ${concept.name} Dashboard
+3. ## Case Cards — for each case, use an Obsidian callout:
+
+> [!abstract] [[Case Name]] (year)
+> **Type**: relationship type | **Strength**: strength
+> Brief facts + holding summary.
+> **Key Takeaway**: one sentence.
+
+4. ## Traceability Matrix — markdown table with [[wikilinks]]:
+   | Case | Relationship | Description |
+
+5. ## Structural Outline — use ### subheadings and paragraphs (not just bullets). Always blank line between bullets and paragraphs.
+
+===== SHARED DATA =====
+
+Definition: ${concept.definition}
+Cases: ${casesJson}
+Principles: ${principlesJson}
+Rules: ${rulesJson}
+Relationships: ${relsJson}
+
+===== OUTPUT FORMAT =====
+
+Output raw markdown. Write Page 1 FIRST, then on its own line write exactly:
+===DASHBOARD===
+Then write Page 2.
+
+Both pages start with --- (YAML frontmatter). No wrapping code fences.`;
+}
+
 export function buildDashboardPrompt(
     conceptName: string,
     cases: LegalCase[],

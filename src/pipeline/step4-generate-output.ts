@@ -1,30 +1,24 @@
 import { App, Notice, TFile, Vault } from "obsidian";
 import { GeminiClient } from "../ai/gemini-client";
 import {
-    generateConceptPage,
+    generateCombinedPage,
     generateCasePageLocal,
 } from "../generators/concept-page-generator";
-import { generateDashboardPage } from "../generators/dashboard-generator";
 import { generateMatrixPage } from "../generators/matrix-generator";
 import { generateOutlinePage } from "../generators/outline-generator";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
     ExtractedEntities,
     LawNoteSettings,
+    LegalConcept,
     RelationshipMatrix,
 } from "../types";
 import { normalizeConceptName } from "../types";
 import { ensureFolderExists, sanitizeFilename } from "../utils/vault-helpers";
+import { parallelMap } from "../utils/parallel";
 import { classifyLink } from "../link-resolver/link-classifier";
 import { CornellLiiFetcher } from "../link-resolver/fetchers/cornell-lii-fetcher";
 import { CnLawFetcher } from "../link-resolver/fetchers/cn-law-fetcher";
-
-/** Delay between Gemini API calls to avoid rate limiting */
-const API_CALL_DELAY_MS = 1500;
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 // ============================================================
 // Source section markers — invisible in Obsidian reading mode
@@ -205,6 +199,7 @@ export async function runStep4(
     const failedPages: string[] = [];
     const sourceFiles = entities.metadata.sourceDocuments;
     const allGeneratedContent: string[] = [];
+    const concurrency = settings.concurrency ?? 5;
 
     const progressModal = new ProgressModal(app);
     progressModal.open();
@@ -216,24 +211,22 @@ export async function runStep4(
         await ensureFolderExists(app.vault, `${outputFolder}/Cases`);
         await ensureFolderExists(app.vault, `${outputFolder}/Dashboards`);
 
+        // Total: concepts (incl. dashboards) + cases + matrix + outline
         const totalSteps =
             entities.concepts.length +
             entities.cases.length +
-            entities.concepts.length + // dashboards
             2; // matrix + outline
+        let completedSteps = 0;
 
-        let currentStep = 0;
+        // 1. Generate concept + dashboard pages in parallel (AI-powered, combined prompt)
+        progressModal.setStep(
+            `Step 4/4: Generating concept & dashboard pages (0/${entities.concepts.length})...`
+        );
 
-        // 1. Generate concept pages (AI-powered)
-        for (const concept of entities.concepts) {
-            currentStep++;
-            progressModal.setStep(
-                `Step 4/4: Generating concept page ${currentStep}/${totalSteps}: ${concept.name}`
-            );
-            progressModal.setProgress((currentStep / totalSteps) * 100);
-
-            try {
-                const content = await generateConceptPage(
+        const { errors: conceptErrors } = await parallelMap<LegalConcept, void>(
+            entities.concepts,
+            async (concept) => {
+                const { conceptPage, dashboardPage } = await generateCombinedPage(
                     client,
                     settings,
                     concept,
@@ -241,33 +234,52 @@ export async function runStep4(
                     matrix,
                     sourceFiles
                 );
-                const path = `${outputFolder}/Concepts/${sanitizeFilename(concept.name)}.md`;
+
+                // Write concept page
+                const conceptPath = `${outputFolder}/Concepts/${sanitizeFilename(concept.name)}.md`;
                 await createOrUpdateOrAppend(
                     app.vault,
-                    path,
-                    content,
+                    conceptPath,
+                    conceptPage,
                     settings.appendToExisting,
                     concept.name,
                     outputFolder,
                     sourceFiles
                 );
-                generatedFiles.push(path);
-                allGeneratedContent.push(content);
-                await sleep(API_CALL_DELAY_MS);
-            } catch (error) {
-                const msg = error instanceof Error ? error.message : String(error);
-                console.warn(`[law-restructurer] Failed to generate concept page: ${concept.name}`, msg);
-                failedPages.push(concept.name);
+                generatedFiles.push(conceptPath);
+                allGeneratedContent.push(conceptPage);
+
+                // Write dashboard page
+                const dashPath = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;
+                await createOrOverwrite(app.vault, dashPath, dashboardPage);
+                generatedFiles.push(dashPath);
+                allGeneratedContent.push(dashboardPage);
+            },
+            concurrency,
+            200,
+            (completed, total, concept) => {
+                completedSteps++;
+                progressModal.setStep(
+                    `Step 4/4: Generating pages (${completed}/${total}): ${concept.name}`
+                );
+                progressModal.setProgress((completedSteps / totalSteps) * 100);
             }
+        );
+
+        // Collect failures from parallel execution
+        for (const { index, error } of conceptErrors) {
+            const name = entities.concepts[index].name;
+            console.warn(`[law-restructurer] Failed: ${name}`, error.message);
+            failedPages.push(name);
         }
 
         // 2. Generate case pages (local, no AI needed)
         for (const cas of entities.cases) {
-            currentStep++;
+            completedSteps++;
             progressModal.setStep(
-                `Step 4/4: Generating case page ${currentStep}/${totalSteps}: ${cas.name}`
+                `Step 4/4: Generating case page: ${cas.name}`
             );
-            progressModal.setProgress((currentStep / totalSteps) * 100);
+            progressModal.setProgress((completedSteps / totalSteps) * 100);
 
             const content = generateCasePageLocal(cas, entities, matrix);
             const path = `${outputFolder}/Cases/${sanitizeFilename(cas.name)}.md`;
@@ -284,11 +296,11 @@ export async function runStep4(
         }
 
         // 3. Generate relationship matrix (local, always overwrite)
-        currentStep++;
+        completedSteps++;
         progressModal.setStep(
-            `Step 4/4: Generating relationship matrix ${currentStep}/${totalSteps}`
+            `Step 4/4: Generating relationship matrix`
         );
-        progressModal.setProgress((currentStep / totalSteps) * 100);
+        progressModal.setProgress((completedSteps / totalSteps) * 100);
 
         const matrixContent = generateMatrixPage(matrix, entities);
         const matrixPath = `${outputFolder}/Relationship Matrix.md`;
@@ -296,11 +308,11 @@ export async function runStep4(
         generatedFiles.push(matrixPath);
 
         // 4. Generate outline (AI-powered, always overwrite)
-        currentStep++;
+        completedSteps++;
         progressModal.setStep(
-            `Step 4/4: Generating outline ${currentStep}/${totalSteps}`
+            `Step 4/4: Generating outline`
         );
-        progressModal.setProgress((currentStep / totalSteps) * 100);
+        progressModal.setProgress((completedSteps / totalSteps) * 100);
 
         try {
             const outlineContent = await generateOutlinePage(
@@ -312,42 +324,13 @@ export async function runStep4(
             await createOrOverwrite(app.vault, outlinePath, outlineContent);
             generatedFiles.push(outlinePath);
             allGeneratedContent.push(outlineContent);
-            await sleep(API_CALL_DELAY_MS);
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             console.warn(`[law-restructurer] Failed to generate outline`, msg);
             failedPages.push("Outline");
         }
 
-        // 5. Generate dashboards (AI-powered, always overwrite)
-        for (const concept of entities.concepts) {
-            currentStep++;
-            progressModal.setStep(
-                `Step 4/4: Generating dashboard ${currentStep}/${totalSteps}: ${concept.name}`
-            );
-            progressModal.setProgress((currentStep / totalSteps) * 100);
-
-            try {
-                const content = await generateDashboardPage(
-                    client,
-                    settings,
-                    concept,
-                    entities,
-                    matrix
-                );
-                const path = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;
-                await createOrOverwrite(app.vault, path, content);
-                generatedFiles.push(path);
-                allGeneratedContent.push(content);
-                await sleep(API_CALL_DELAY_MS);
-            } catch (error) {
-                const msg = error instanceof Error ? error.message : String(error);
-                console.warn(`[law-restructurer] Failed to generate dashboard: ${concept.name}`, msg);
-                failedPages.push(`${concept.name} Dashboard`);
-            }
-        }
-
-        // 6. Create regulation/statute pages from wikilinks found in generated content
+        // 5. Create regulation/statute pages from wikilinks found in generated content
         const statuteLinks = extractStatuteLinks(allGeneratedContent);
         if (statuteLinks.length > 0) {
             await createRegulationPages(

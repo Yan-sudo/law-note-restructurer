@@ -11,7 +11,8 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(node esbuild.config.mjs:*)",
-      "Bash(./node_modules/.bin/tsc:*)"
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(wc:*)"
     ]
   }
 }

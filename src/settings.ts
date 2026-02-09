@@ -76,6 +76,22 @@ export class LawNoteSettingTab extends PluginSettingTab {
                     })
             );
 
+        new Setting(containerEl)
+            .setName("Concurrency")
+            .setDesc(
+                "Parallel AI requests in Step 4. Lower for free tier (2-3), higher for paid (5-10). (并行请求数)"
+            )
+            .addSlider((slider) =>
+                slider
+                    .setLimits(1, 10, 1)
+                    .setValue(this.plugin.settings.concurrency)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        this.plugin.settings.concurrency = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
         // --- Output Configuration ---
         containerEl.createEl("h3", { text: "Output Configuration" });
 

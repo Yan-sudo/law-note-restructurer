@@ -11,6 +11,7 @@ export interface LawNoteSettings {
     enableStreaming: boolean;
     enableSourceFootnotes: boolean;
     appendToExisting: boolean;
+    concurrency: number;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     enableStreaming: true,
     enableSourceFootnotes: true,
     appendToExisting: true,
+    concurrency: 5,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,
