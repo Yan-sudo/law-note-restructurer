@@ -251,7 +251,15 @@ export async function runStep4(
 
                 // Write dashboard page
                 const dashPath = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;
-                await createOrOverwrite(app.vault, dashPath, dashboardPage);
+                await createOrUpdateOrAppend(
+                    app.vault,
+                    dashPath,
+                    dashboardPage,
+                    settings.appendToExisting,
+                    `${concept.name} Dashboard`,
+                    outputFolder,
+                    sourceFiles
+                );
                 generatedFiles.push(dashPath);
                 allGeneratedContent.push(dashboardPage);
             },
@@ -307,7 +315,7 @@ export async function runStep4(
         await createOrOverwrite(app.vault, matrixPath, matrixContent);
         generatedFiles.push(matrixPath);
 
-        // 4. Generate outline (AI-powered, always overwrite)
+        // 4. Generate outline (AI-powered, supports append)
         completedSteps++;
         progressModal.setStep(
             `Step 4/4: Generating outline`
@@ -321,7 +329,15 @@ export async function runStep4(
                 entities
             );
             const outlinePath = `${outputFolder}/Outline.md`;
-            await createOrOverwrite(app.vault, outlinePath, outlineContent);
+            await createOrUpdateOrAppend(
+                app.vault,
+                outlinePath,
+                outlineContent,
+                settings.appendToExisting,
+                "Outline",
+                outputFolder,
+                sourceFiles
+            );
             generatedFiles.push(outlinePath);
             allGeneratedContent.push(outlineContent);
         } catch (error) {
