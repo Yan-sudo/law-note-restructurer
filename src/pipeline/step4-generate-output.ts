@@ -272,14 +272,30 @@ export async function runStep4(
                     `Step 4/4: Generating pages (${completed}/${total}): ${concept.name}`
                 );
                 progressModal.setProgress((completedSteps / totalSteps) * 100);
+            },
+            (_idx, concept, error) => {
+                const errMsg = error.message.length > 120
+                    ? error.message.slice(0, 120) + "..."
+                    : error.message;
+                progressModal.updatePreview(`FAILED: ${concept.name} — ${errMsg}`);
             }
         );
 
-        // Collect failures from parallel execution
+        // Collect failures from parallel execution and show in UI
         for (const { index, error } of conceptErrors) {
             const name = entities.concepts[index].name;
+            const errMsg = error.message.length > 100
+                ? error.message.slice(0, 100) + "..."
+                : error.message;
             console.warn(`[law-restructurer] Failed: ${name}`, error.message);
             failedPages.push(name);
+            progressModal.updatePreview(`FAILED: ${name} — ${errMsg}`);
+        }
+        if (conceptErrors.length > 0) {
+            new Notice(
+                `${conceptErrors.length} page(s) failed during generation. Check progress log for details. (${conceptErrors.length} 个页面生成失败)`,
+                6000
+            );
         }
 
         // 2. Generate case pages (local, no AI needed)

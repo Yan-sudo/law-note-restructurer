@@ -31,37 +31,69 @@ export class GeminiClient {
         onChunk: (text: string, accumulated: string) => void,
         jsonMode: boolean = false
     ): Promise<string> {
-        this.abortController = new AbortController();
-        let accumulated = "";
+        const maxRetries = 3;
+        let lastError: Error | null = null;
 
-        try {
-            const config: Record<string, unknown> = {
-                temperature: this.settings.temperature,
-                maxOutputTokens: 65536,
-            };
-            if (jsonMode) {
-                config.responseMimeType = "application/json";
-            }
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            this.abortController = new AbortController();
+            let accumulated = "";
 
-            const response = await this.ai.models.generateContentStream({
-                model: this.settings.modelName,
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                config,
-            });
-
-            for await (const chunk of response) {
-                if (this.abortController?.signal.aborted) {
-                    throw new Error("Request aborted by user");
+            try {
+                const config: Record<string, unknown> = {
+                    temperature: this.settings.temperature,
+                    maxOutputTokens: 65536,
+                };
+                if (jsonMode) {
+                    config.responseMimeType = "application/json";
                 }
-                const text = chunk.text ?? "";
-                accumulated += text;
-                onChunk(text, accumulated);
-            }
 
-            return accumulated;
-        } finally {
-            this.abortController = null;
+                const response = await this.ai.models.generateContentStream({
+                    model: this.settings.modelName,
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    config,
+                });
+
+                for await (const chunk of response) {
+                    if (this.abortController?.signal.aborted) {
+                        throw new Error("Request aborted by user");
+                    }
+                    const text = chunk.text ?? "";
+                    accumulated += text;
+                    onChunk(text, accumulated);
+                }
+
+                return accumulated;
+            } catch (error: unknown) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                const msg = lastError.message.toLowerCase();
+
+                // User abort: don't retry
+                if (msg.includes("aborted")) throw lastError;
+                // Auth: don't retry
+                if (msg.includes("401") || msg.includes("api key")) throw lastError;
+                // Safety: don't retry
+                if (msg.includes("safety") || msg.includes("blocked")) throw lastError;
+
+                // Retryable: rate limit, server error, network
+                if (attempt < maxRetries) {
+                    const isRateLimit = msg.includes("429") || msg.includes("rate limit") || msg.includes("resource exhausted");
+                    const isServerError = msg.includes("500") || msg.includes("503") || msg.includes("internal") || msg.includes("unavailable") || msg.includes("overloaded");
+                    const waitMs = isRateLimit
+                        ? Math.pow(2, attempt) * 1000 + Math.random() * 1000
+                        : isServerError
+                            ? Math.pow(2, attempt) * 2000 + Math.random() * 1000
+                            : 2000;
+                    const label = isRateLimit ? "Rate limited" : isServerError ? "Server error" : "Error";
+                    new Notice(`${label}. Retrying in ${Math.ceil(waitMs / 1000)}s... (${attempt}/${maxRetries})`);
+                    await sleep(waitMs);
+                    continue;
+                }
+            } finally {
+                this.abortController = null;
+            }
         }
+
+        throw lastError ?? new Error("Streaming failed after retries");
     }
 
     async generateStructuredStreaming<T>(
@@ -128,6 +160,20 @@ export class GeminiClient {
                     throw new Error("Content blocked by safety filters. Try different source material.");
                 }
 
+                // Google server errors (500, 503, INTERNAL, UNAVAILABLE): backoff + retry
+                if (
+                    msg.includes("500") || msg.includes("503") ||
+                    msg.includes("internal") || msg.includes("unavailable") ||
+                    msg.includes("server error") || msg.includes("overloaded")
+                ) {
+                    if (attempt < maxRetries) {
+                        const waitMs = Math.pow(2, attempt) * 2000 + Math.random() * 1000;
+                        new Notice(`Google server error. Retrying in ${Math.ceil(waitMs / 1000)}s... (${attempt}/${maxRetries})`);
+                        await sleep(waitMs);
+                        continue;
+                    }
+                }
+
                 // Network: retry
                 if (msg.includes("network") || msg.includes("fetch") || msg.includes("econnrefused")) {
                     if (attempt < maxRetries) {
@@ -139,7 +185,7 @@ export class GeminiClient {
 
                 // Other: retry
                 if (attempt < maxRetries) {
-                    new Notice(`Error. Retrying... (${attempt}/${maxRetries})`);
+                    new Notice(`Error: ${lastError.message.slice(0, 100)}. Retrying... (${attempt}/${maxRetries})`);
                     await sleep(1000);
                     continue;
                 }

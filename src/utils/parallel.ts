@@ -12,7 +12,8 @@ export async function parallelMap<T, R>(
     fn: (item: T, index: number) => Promise<R>,
     concurrency: number,
     minInterval: number = 200,
-    onProgress?: (completed: number, total: number, item: T) => void
+    onProgress?: (completed: number, total: number, item: T) => void,
+    onError?: (index: number, item: T, error: Error) => void
 ): Promise<{ results: (R | undefined)[]; errors: { index: number; error: Error }[] }> {
     const results: (R | undefined)[] = new Array(items.length);
     const errors: { index: number; error: Error }[] = [];
@@ -27,11 +28,10 @@ export async function parallelMap<T, R>(
             try {
                 results[idx] = await fn(items[idx], idx);
             } catch (err) {
-                errors.push({
-                    index: idx,
-                    error: err instanceof Error ? err : new Error(String(err)),
-                });
+                const error = err instanceof Error ? err : new Error(String(err));
+                errors.push({ index: idx, error });
                 results[idx] = undefined;
+                onError?.(idx, items[idx], error);
             }
             completedCount++;
             onProgress?.(completedCount, items.length, items[idx]);
