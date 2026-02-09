@@ -12,8 +12,8 @@ export function generateUSCasePage(data: {
     source: string;
 }): string {
     const opinionText =
-        data.opinion.length > 3000
-            ? data.opinion.slice(0, 3000) +
+        data.opinion.length > 15000
+            ? data.opinion.slice(0, 15000) +
               "\n\n*[Opinion truncated. See full text at source link.]*"
             : data.opinion;
 
@@ -55,8 +55,8 @@ export function generateUSStatutePage(data: {
     sourceUrl: string;
 }): string {
     const statuteText =
-        data.text.length > 5000
-            ? data.text.slice(0, 5000) +
+        data.text.length > 20000
+            ? data.text.slice(0, 20000) +
               "\n\n*[Text truncated. See full text at source link.]*"
             : data.text;
 
@@ -125,6 +125,50 @@ ${preview || "*暂无条文内容。*"}
 ## 学习笔记
 
 *在此添加学习笔记。*
+`;
+}
+
+export function generateUSCaseStubPage(data: {
+    caseName: string;
+    searchLinks: { label: string; url: string }[];
+}): string {
+    const linkLines = data.searchLinks
+        .map((l) => `- [${l.label}](${l.url})`)
+        .join("\n");
+
+    return `---
+tags:
+  - law/case
+  - law/us-case
+date: ${today()}
+generated-by: law-note-restructurer
+source: stub
+---
+
+# ${data.caseName}
+
+> [!warning] Auto-fetch unavailable
+> This case could not be automatically retrieved. Use the search links below to find the full opinion, then paste key details here.
+
+## Search Links
+
+${linkLines}
+
+## Case Facts
+
+*To be filled in*
+
+## Holding
+
+*To be filled in*
+
+## Significance
+
+*To be filled in*
+
+## Related Concepts
+
+*Links will be populated as you study this case.*
 `;
 }
 

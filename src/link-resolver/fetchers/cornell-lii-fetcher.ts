@@ -134,34 +134,109 @@ export class CornellLiiFetcher extends BaseFetcher {
     }
 
     private extractStatuteText(html: string): string {
-        // Try multiple content selectors
-        const patterns = [
-            // Main content area for USC sections
-            /<div[^>]*id="content"[^>]*>([\s\S]*?)<\/div>\s*<div[^>]*class="[^"]*(?:sidebar|footer)/i,
-            /<div[^>]*class="[^"]*field-items[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i,
-            // Broader content area
-            /<div[^>]*class="[^"]*tab-pane[^"]*active[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i,
-            // Fallback: main tag
-            /<main[^>]*>([\s\S]*?)<\/main>/i,
-        ];
+        // Strategy: extract <body>, remove non-content elements, strip HTML,
+        // then find the statute text between known start/end markers.
 
-        for (const pattern of patterns) {
-            const match = pattern.exec(html);
-            if (match) {
-                const text = this.stripHtml(match[1]);
-                if (text.length > 50) return text;
-            }
+        let content = html;
+
+        // Try to isolate <body> content
+        const bodyMatch = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html);
+        if (bodyMatch) {
+            content = bodyMatch[1];
         }
 
-        // Last fallback: extract title and og:description
+        // Remove non-content elements
+        content = content
+            .replace(/<script[\s\S]*?<\/script>/gi, "")
+            .replace(/<style[\s\S]*?<\/style>/gi, "")
+            .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+            .replace(/<header[\s\S]*?<\/header>/gi, "")
+            .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+            .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
+            .replace(/<form[\s\S]*?<\/form>/gi, "")
+            .replace(/<img[^>]*>/gi, "");
+
+        const text = this.stripHtml(content);
+
+        // Find the statute content between known markers.
+        // Cornell LII pages have a pattern like:
+        //   "X U.S. Code § NNN - Title text"
+        // followed by the actual statute, ending before:
+        //   "U.S. Code Toolbox" or "Editorial Notes" or similar footer
+
+        const cleaned = this.isolateStatuteBody(text);
+        if (cleaned.length > 50) {
+            return cleaned;
+        }
+
+        // Fallback: title + description meta
         const titleMatch = /<title[^>]*>([^<]*)<\/title>/i.exec(html);
         const descMatch =
-            /<meta[^>]*name="description"[^>]*content="([^"]*)"/.exec(
-                html
-            );
+            /<meta[^>]*name="description"[^>]*content="([^"]*)"/.exec(html);
         const parts: string[] = [];
         if (titleMatch) parts.push(titleMatch[1].trim());
         if (descMatch) parts.push(descMatch[1].trim());
         return parts.join("\n\n") || "Content could not be extracted.";
+    }
+
+    /**
+     * Find the actual statute text within the stripped page text.
+     * Uses known start patterns (section title) and end patterns (toolbox, sidebar).
+     */
+    private isolateStatuteBody(text: string): string {
+        // Start markers: look for the section title
+        const startPatterns = [
+            // "26 U.S. Code § 741 - Recognition and character..."
+            /\d+\s+U\.?\s*S\.?\s*Code\s*§\s*\d+\w*\s*[-–—]\s*/i,
+            // "§ 741. Recognition and character..."
+            /§\s*\d+\w*\.\s+\w/,
+            // "(a) " at start of subsection
+            /\n\s*\(a\)\s/,
+        ];
+
+        let startIdx = -1;
+        for (const pattern of startPatterns) {
+            const match = pattern.exec(text);
+            if (match && match.index < text.length * 0.6) {
+                startIdx = match.index;
+                break;
+            }
+        }
+
+        if (startIdx < 0) {
+            startIdx = 0;
+        }
+
+        let result = text.substring(startIdx);
+
+        // End markers: trim at known footer/sidebar patterns
+        const endPatterns = [
+            /\n\s*U\.?\s*S\.?\s*Code\s+Toolbox/i,
+            /\n\s*Law about\.\.\./i,
+            /\n\s*Table of Popular Names/i,
+            /\n\s*Parallel Table of Authorities/i,
+            /\n\s*How\s+current is this/i,
+            /\n\s*Please help us improve/i,
+            /\n\s*Quick search by citation/i,
+            /\n\s*Search Cornell/i,
+            /\n\s*About LII/i,
+            /\n\s*Accessibility/i,
+        ];
+
+        for (const pattern of endPatterns) {
+            const match = pattern.exec(result);
+            if (match) {
+                result = result.substring(0, match.index);
+            }
+        }
+
+        // Clean up navigation artifacts
+        result = result
+            .replace(/\bprev\s*\|\s*next\b/gi, "")
+            .replace(/^\s*-\s*U\.?\s*S\.?\s*Code\s*-\s*Notes\s*/im, "")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+
+        return result;
     }
 }

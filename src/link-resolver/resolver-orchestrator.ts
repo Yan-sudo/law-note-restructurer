@@ -11,6 +11,7 @@ import { JustiaFetcher } from "./fetchers/justia-fetcher";
 import { CornellLiiFetcher } from "./fetchers/cornell-lii-fetcher";
 import { CnLawFetcher } from "./fetchers/cn-law-fetcher";
 import { CnCaseFetcher } from "./fetchers/cn-case-fetcher";
+import { generateUSCaseStubPage } from "./page-templates";
 
 export function runLinkResolver(
     app: App,
@@ -159,10 +160,18 @@ async function fetchLink(
                     `CourtListener failed for "${link.linkText}", trying Justia...`
                 );
             }
-            return new JustiaFetcher(delay).fetch(
+
+            const justiaResult = await new JustiaFetcher(delay).fetch(
                 link.linkText,
                 link.parsed
             );
+            if (justiaResult.success) return justiaResult;
+
+            // Fallback: create stub page with search links
+            console.warn(
+                `Justia also failed for "${link.linkText}", creating stub page.`
+            );
+            return createUSCaseStub(link.linkText);
         }
 
         case "us-statute":
@@ -192,4 +201,38 @@ async function fetchLink(
                 error: `Cannot resolve link of unknown category: "${link.linkText}"`,
             };
     }
+}
+
+function createUSCaseStub(linkText: string): FetchResult {
+    const q = encodeURIComponent(linkText);
+    const searchLinks = [
+        {
+            label: "Google Scholar",
+            url: `https://scholar.google.com/scholar?q=${q}&hl=en&as_sdt=4`,
+        },
+        {
+            label: "CourtListener",
+            url: `https://www.courtlistener.com/?q=${q}&type=o`,
+        },
+        {
+            label: "Justia",
+            url: `https://www.justia.com/search?q=${q}`,
+        },
+        {
+            label: "Casetext",
+            url: `https://casetext.com/search?q=${q}`,
+        },
+    ];
+
+    const content = generateUSCaseStubPage({
+        caseName: linkText,
+        searchLinks,
+    });
+
+    return {
+        success: true,
+        title: linkText,
+        content,
+        source: "stub",
+    };
 }
