@@ -9,6 +9,7 @@ export class ProgressModal extends Modal {
     private cancelCallback: (() => void) | null = null;
     private errorLog: string[] = [];
     private stopped = false;
+    private cancelled = false;
 
     constructor(app: App) {
         super(app);
@@ -42,6 +43,7 @@ export class ProgressModal extends Modal {
             if (this.stopped) {
                 this.close();
             } else {
+                this.cancelled = true;
                 this.cancelCallback?.();
                 this.close();
             }
@@ -127,6 +129,11 @@ export class ProgressModal extends Modal {
     /** Check if any errors have been logged */
     hasErrors(): boolean {
         return this.errorLog.length > 0;
+    }
+
+    /** Check if user has clicked cancel */
+    isCancelled(): boolean {
+        return this.cancelled;
     }
 
     onCancelClick(callback: () => void): void {

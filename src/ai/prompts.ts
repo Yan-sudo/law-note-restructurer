@@ -193,84 +193,86 @@ export function buildOutlinePrompt(
     entities: ExtractedEntities,
     language: "zh" | "en" | "mixed"
 ): string {
-    return `You are a legal education assistant generating a RULE-BASED PRACTICAL OUTLINE in Obsidian.
+    return `You are a legal education assistant generating a comprehensive COURSE OUTLINE in Obsidian.
 
 ## Language
 ${langInstruction(language)}
 ${FORMAT_RULES}
 
 ## Purpose
-Write a DECISION-TREE STYLE OUTLINE that a student can use during an exam or practice problem. Focus ENTIRELY on:
-- **When** does a rule apply? (trigger / threshold / conditions)
-- **What** are the elements to check? (numbered steps)
-- **What result** follows? (legal consequence)
-- **Exceptions** and how to spot them
-
-Do NOT explain concepts or provide background theory — those belong in separate [[concept pages]]. This outline is purely OPERATIONAL: "if X, then check Y, result is Z."
+Write a structured COURSE OUTLINE that organizes the legal doctrines, rules, and principles into a coherent hierarchy. This should read like a well-organized law school outline — concise definitions, rule statements, key elements, and landmark cases that established or illustrate each doctrine.
 
 ## CRITICAL: No Hallucinated Links
 ONLY create [[wikilinks]] to case names, concept names, and statute citations that appear in the Data section below.
 Do NOT invent new names or links. If a concept is not in the data, mention it as plain text, not a [[wikilink]].
 Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
 
+## Content Guidelines
+1. **Define each doctrine/concept** with a brief, precise statement of the rule.
+2. **List elements or requirements** as numbered items where applicable.
+3. **Cite landmark cases**: When a doctrine was established, refined, or best illustrated by a case in the data, mention it parenthetically — e.g., "([[Case Name]], ${new Date().getFullYear()})". Do NOT create separate case-listing sections; weave case references naturally into the rule description.
+4. **Note exceptions and limitations** under the relevant rule.
+5. **Statutory authority**: Reference statutes inline where relevant.
+6. Do NOT repeat full case facts or holdings — a brief parenthetical (case name + what it stands for) is sufficient.
+7. Not every rule needs a case citation. Only cite cases that are genuinely central to the doctrine.
+
 ## Structure Rules
-1. Use Obsidian HEADINGS: # for title, ## for major topics, ### for rules/doctrines, #### for sub-rules.
-2. Under each heading, state the RULE directly as an actionable test or decision step.
-3. Use **numbered lists** for sequential steps (element tests, application steps).
-4. Use bullet points for non-sequential items (exceptions, factors, examples).
-5. Cite authority INLINE with [[wikilinks]]: "... per [[Case Name]]." — do NOT write separate "See" paragraphs.
+1. Use Obsidian HEADINGS: # for title, ## for major topic areas, ### for specific doctrines/rules, #### for sub-rules or special cases.
+2. Group related doctrines under common ## headings by subject area.
+3. Use **numbered lists** for sequential elements or multi-part tests.
+4. Use bullet points for non-sequential items (exceptions, factors, policy rationales).
+5. ALWAYS put a blank line after every heading before any content.
 6. ALWAYS put a blank line between a list and the next paragraph or heading.
-7. ALWAYS put a blank line after every heading before any content.
-8. Link concept names as [[wikilinks]] on first mention only — do NOT define them here.
+7. Link concept names as [[wikilinks]] on first mention only.
 
 ## Example of Correct Format
 ---
 tags:
   - law/outline
-date: 2026-02-08
+date: ${new Date().toISOString().slice(0, 10)}
 ---
 
 # Partnership Taxation Outline
 
-## Classification: Entity vs. Aggregate
+## Formation and Contributions
 
-### When to Apply Aggregate Theory
+### Tax-Free Contributions ([[IRC § 721]])
 
-Apply aggregate treatment when the transaction looks through the partnership to its individual partners.
+No gain or loss is recognized when property is contributed to a partnership in exchange for a partnership interest.
 
-1. **Trigger**: Is the tax provision partner-specific (e.g., character of income, holding period, basis)?
-2. **Check**: Does the Code section or regulation explicitly treat partners as individuals?
-3. **Result**: Each partner reports their distributive share as if they directly owned the underlying assets.
+**Elements:**
 
-Exceptions:
+1. Transfer of property (including money)
+2. To a partnership (formation or additional contribution)
+3. In exchange for a partnership interest
 
-- Election under [[IRC § 754]] is entity-level but produces aggregate-like results per [[Reg. § 1.743-1]].
+**Basis consequences:** Contributing partner takes a substituted basis ([[IRC § 722]]); partnership takes a carryover basis ([[IRC § 723]]).
 
-### When to Apply Entity Theory
+**Exception — Investment Company Rule** ([[IRC § 721(b)]]): Gain is recognized if the contribution results in diversification of the transferor's portfolio.
 
-Apply entity treatment when the partnership acts as a separate taxpayer.
+### Services for Partnership Interest
 
-1. **Trigger**: Is the transaction at the partnership level (e.g., filing, elections, debt allocation)?
-2. **Check**: Does the provision address the partnership itself rather than individual partners?
-3. **Result**: The partnership is the relevant taxpayer; partners are passive recipients.
+A partner who receives a capital interest for services must recognize ordinary income equal to the FMV of the interest received ([[Diamond v. Commissioner]], 1974).
 
-Key indicator: If the Code says "the partnership shall..." → entity treatment per [[IRC § 701]].
+- If the partner receives only a *profits interest*, generally no immediate recognition ([[Rev. Proc. 93-27]]).
 
-## Contributions
+## Entity vs. Aggregate Theory
 
-### Tax-Free Contribution: [[IRC § 721]]
+The tax code treats partnerships as **entities** for some purposes and **aggregates** of individual partners for others.
 
-1. Is the transfer "to a partnership"? (formation or additional contribution)
-2. Is it "in exchange for a partnership interest"?
-3. **Result if both yes**: No gain/loss recognized. Basis carries over per [[IRC § 722]] / [[IRC § 723]].
+### Entity Treatment
 
-Exception — **Investment Company Rule** ([[IRC § 721(b)]]): If the contribution results in diversification of transferor's portfolio → gain IS recognized.
+The partnership files its own return and makes certain elections at the entity level ([[IRC § 701]]).
 
-## END OF EXAMPLE — follow this decision-tree format exactly.
+### Aggregate Treatment
+
+Each partner reports their distributive share as if they directly owned the underlying assets. Character of income flows through ([[IRC § 702(b)]]).
+
+## END OF EXAMPLE
 
 ## Data
-Concepts: ${JSON.stringify(entities.concepts.map((c) => ({ name: c.name, category: c.category })))}
-Cases: ${JSON.stringify(entities.cases.map((c) => ({ name: c.name, year: c.year, holding: c.holding })))}
+Concepts: ${JSON.stringify(entities.concepts.map((c) => ({ name: c.name, category: c.category, definition: c.definition })))}
+Cases: ${JSON.stringify(entities.cases.map((c) => ({ name: c.name, year: c.year, holding: c.holding, significance: c.significance, relatedConcepts: c.relatedConcepts })))}
 Rules: ${JSON.stringify(entities.rules.map((r) => ({ name: r.name, statement: r.statement, elements: r.elements, exceptions: r.exceptions, applicationSteps: r.applicationSteps })))}
 Principles: ${JSON.stringify(entities.principles.map((p) => ({ name: p.name, description: p.description })))}
 

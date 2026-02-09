@@ -19,7 +19,7 @@ import { parallelMap } from "../utils/parallel";
 import { classifyLink } from "../link-resolver/link-classifier";
 import { CornellLiiFetcher } from "../link-resolver/fetchers/cornell-lii-fetcher";
 import { CnLawFetcher } from "../link-resolver/fetchers/cn-law-fetcher";
-import { normalizeCitation } from "../utils/citation-normalizer";
+import { normalizeCitation, getBaseSection } from "../utils/citation-normalizer";
 
 // ============================================================
 // Source section markers — invisible in Obsidian reading mode
@@ -406,7 +406,8 @@ export async function runStep4(
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
 
 function extractStatuteLinks(contents: string[]): string[] {
-    const seenNormalized = new Map<string, string>(); // normalized → shortest raw
+    // Step 1: Collect all statute wikilinks, normalize, and deduplicate by normalized form
+    const byNormalized = new Map<string, string>(); // normalized → normalized (dedup)
 
     for (const content of contents) {
         let match: RegExpExecArray | null;
@@ -418,13 +419,22 @@ function extractStatuteLinks(contents: string[]): string[] {
             if (category !== "us-statute" && category !== "cn-law") continue;
 
             const normalized = normalizeCitation(linkTarget);
-            const existing = seenNormalized.get(normalized);
-            if (!existing || linkTarget.length < existing.length) {
-                seenNormalized.set(normalized, linkTarget);
-            }
+            byNormalized.set(normalized, normalized);
         }
     }
-    return Array.from(seenNormalized.values());
+
+    // Step 2: Collapse by base section so "IRC § 511" and "IRC § 511(a)" → one entry
+    // Keep the base section form (shortest) as the canonical name
+    const byBase = new Map<string, string>(); // baseSection → shortest normalized
+    for (const normalized of byNormalized.keys()) {
+        const base = getBaseSection(normalized);
+        const existing = byBase.get(base);
+        if (!existing || normalized.length < existing.length) {
+            byBase.set(base, normalized);
+        }
+    }
+
+    return Array.from(byBase.values());
 }
 
 function generateStatuteStubPage(linkText: string, liiUrl: string | null): string {
@@ -471,6 +481,8 @@ async function createRegulationPages(
     const cnLawFetcher = new CnLawFetcher(delay);
 
     for (let i = 0; i < statuteLinks.length; i++) {
+        if (progressModal.isCancelled()) break;
+
         const linkText = statuteLinks[i];
         progressModal.setStep(
             `Creating regulation pages ${i + 1}/${statuteLinks.length}: ${linkText}`
