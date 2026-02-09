@@ -219,7 +219,34 @@ export async function runStep4(
             2; // matrix + outline
         let completedSteps = 0;
 
-        // 1. Generate concept + dashboard pages in parallel (AI-powered, combined prompt)
+        // 1. Start outline generation early — it only needs entities, not generated pages.
+        //    Runs concurrently with concept generation below.
+        const outlinePromise = generateOutlinePage(client, settings, entities)
+            .then(async (outlineContent) => {
+                const outlinePath = `${outputFolder}/Outline.md`;
+                await createOrUpdateOrAppend(
+                    app.vault,
+                    outlinePath,
+                    outlineContent,
+                    settings.appendToExisting,
+                    "Outline",
+                    outputFolder,
+                    sourceFiles
+                );
+                generatedFiles.push(outlinePath);
+                allGeneratedContent.push(outlineContent);
+                completedSteps++;
+                progressModal.setProgress((completedSteps / totalSteps) * 100);
+            })
+            .catch((error: unknown) => {
+                const msg = error instanceof Error ? error.message : String(error);
+                console.warn(`[law-restructurer] Failed to generate outline`, msg);
+                failedPages.push("Outline");
+                progressModal.addError(`[Outline] ${msg}`);
+                completedSteps++;
+            });
+
+        // 2. Generate concept + dashboard pages in parallel (AI-powered, combined prompt)
         progressModal.setStep(
             `Step 4/4: Generating concept & dashboard pages (0/${entities.concepts.length})...`
         );
@@ -285,7 +312,7 @@ export async function runStep4(
             failedPages.push(name);
         }
 
-        // 2. Generate case pages (local, no AI needed)
+        // 3. Generate case pages (local, no AI needed)
         for (const cas of entities.cases) {
             completedSteps++;
             progressModal.setStep(
@@ -307,7 +334,7 @@ export async function runStep4(
             generatedFiles.push(path);
         }
 
-        // 3. Generate relationship matrix (local, always overwrite)
+        // 4. Generate relationship matrix (local, always overwrite)
         completedSteps++;
         progressModal.setStep(
             `Step 4/4: Generating relationship matrix`
@@ -319,37 +346,9 @@ export async function runStep4(
         await createOrOverwrite(app.vault, matrixPath, matrixContent);
         generatedFiles.push(matrixPath);
 
-        // 4. Generate outline (AI-powered, supports append)
-        completedSteps++;
-        progressModal.setStep(
-            `Step 4/4: Generating outline`
-        );
-        progressModal.setProgress((completedSteps / totalSteps) * 100);
-
-        try {
-            const outlineContent = await generateOutlinePage(
-                client,
-                settings,
-                entities
-            );
-            const outlinePath = `${outputFolder}/Outline.md`;
-            await createOrUpdateOrAppend(
-                app.vault,
-                outlinePath,
-                outlineContent,
-                settings.appendToExisting,
-                "Outline",
-                outputFolder,
-                sourceFiles
-            );
-            generatedFiles.push(outlinePath);
-            allGeneratedContent.push(outlineContent);
-        } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            console.warn(`[law-restructurer] Failed to generate outline`, msg);
-            failedPages.push("Outline");
-            progressModal.addError(`[Outline] ${msg}`);
-        }
+        // 5. Wait for outline if it hasn't finished yet (usually done by now)
+        progressModal.setStep(`Step 4/4: Finalizing outline...`);
+        await outlinePromise;
 
         // 5. Create regulation/statute pages from wikilinks found in generated content
         const statuteLinks = extractStatuteLinks(allGeneratedContent);

@@ -282,33 +282,65 @@
 }
 
 /* Relationship Matrix */
+.law-restructurer-wide-modal {
+    width: 85vw !important;
+    max-width: 1100px !important;
+}
+
 .law-restructurer-relationship-review {
-    max-height: 80vh;
+    max-height: 85vh;
     overflow-y: auto;
-    min-width: 600px;
 }
 
 .law-restructurer-matrix-container {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: 50vh;
     margin-bottom: 16px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
 }
 
 .law-restructurer-matrix-table {
-    width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 12px;
+    min-width: max-content;
 }
 
 .law-restructurer-matrix-table th,
 .law-restructurer-matrix-table td {
-    border: 1px solid var(--background-modifier-border);
+    border-right: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
     padding: 6px 8px;
     text-align: left;
+    white-space: nowrap;
 }
 
-.law-restructurer-matrix-table th {
+/* Sticky header row */
+.law-restructurer-matrix-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     background: var(--background-secondary);
     font-weight: 600;
+}
+
+/* Sticky first column (case names) */
+.law-restructurer-matrix-row-header {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--background-primary);
+    font-weight: 500;
+}
+
+/* Corner cell: sticky both directions */
+.law-restructurer-matrix-corner {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    background: var(--background-secondary);
 }
 
 .law-restructurer-rel-establishes { background: rgba(0, 180, 0, 0.1); }

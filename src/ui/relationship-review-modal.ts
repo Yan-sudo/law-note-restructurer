@@ -31,6 +31,9 @@ export class RelationshipReviewModal extends Modal {
         contentEl.empty();
         contentEl.addClass("law-restructurer-relationship-review");
 
+        // Widen the modal for better table visibility
+        this.modalEl.addClass("law-restructurer-wide-modal");
+
         contentEl.createEl("h2", {
             text: "Review Relationships (审查关系矩阵)",
         });
@@ -77,7 +80,8 @@ export class RelationshipReviewModal extends Modal {
         // Header row
         const thead = table.createEl("thead");
         const headerRow = thead.createEl("tr");
-        headerRow.createEl("th", { text: "Case \\ Concept" });
+        const cornerCell = headerRow.createEl("th", { text: "Case \\ Concept" });
+        cornerCell.addClass("law-restructurer-matrix-corner");
         for (const conceptId of this.matrix.conceptsInOrder) {
             const concept = this.entities.concepts.find(
                 (c) => c.id === conceptId
@@ -92,7 +96,8 @@ export class RelationshipReviewModal extends Modal {
         for (const caseId of this.matrix.casesInOrder) {
             const cas = this.entities.cases.find((c) => c.id === caseId);
             const row = tbody.createEl("tr");
-            row.createEl("td", { text: cas?.name ?? caseId });
+            const rowHeader = row.createEl("td", { text: cas?.name ?? caseId });
+            rowHeader.addClass("law-restructurer-matrix-row-header");
 
             for (const conceptId of this.matrix.conceptsInOrder) {
                 const entry = this.matrix.entries.find(

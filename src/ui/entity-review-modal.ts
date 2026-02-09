@@ -41,6 +41,7 @@ export class EntityReviewModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.addClass("law-restructurer-entity-review");
+        this.modalEl.addClass("law-restructurer-wide-modal");
 
         contentEl.createEl("h2", { text: "Review Extracted Entities (审查提取的实体)" });
 
