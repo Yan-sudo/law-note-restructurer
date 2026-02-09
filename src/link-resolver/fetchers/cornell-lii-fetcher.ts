@@ -76,6 +76,28 @@ export class CornellLiiFetcher extends BaseFetcher {
         linkText: string,
         parsed: ParsedCitation
     ): string | null {
+        // IRC § X → 26 USC X
+        const ircMatch = linkText.match(/I\.?R\.?C\.?\s*§\s*(\d+)/i);
+        if (ircMatch) {
+            return `https://www.law.cornell.edu/uscode/text/26/${ircMatch[1]}`;
+        }
+
+        // Treas. Reg. § X.Y → 26 CFR X.Y
+        const tregMatch = linkText.match(
+            /Treas\.?\s*Reg\.?\s*§\s*([\d.]+(?:-[\d]+)?)/i
+        );
+        if (tregMatch) {
+            return `https://www.law.cornell.edu/cfr/text/26/section-${tregMatch[1]}`;
+        }
+
+        // Reg. § X.Y (shorthand) → 26 CFR X.Y
+        const regMatch = linkText.match(
+            /^Reg\.?\s*§\s*([\d.]+(?:-[\d]+)?)/i
+        );
+        if (regMatch) {
+            return `https://www.law.cornell.edu/cfr/text/26/section-${regMatch[1]}`;
+        }
+
         // USC: law.cornell.edu/uscode/text/{title}/{section}
         const uscMatch = linkText.match(
             /(\d+)\s*U\.?S\.?C\.?A?\.?\s*§?\s*(\d+\w*)/i
@@ -102,6 +124,9 @@ export class CornellLiiFetcher extends BaseFetcher {
 
         // Fallback using parsed data
         if (parsed.title && parsed.section) {
+            if (parsed.title === "26" && parsed.section.includes(".")) {
+                return `https://www.law.cornell.edu/cfr/text/26/section-${parsed.section}`;
+            }
             return `https://www.law.cornell.edu/uscode/text/${parsed.title}/${parsed.section}`;
         }
 

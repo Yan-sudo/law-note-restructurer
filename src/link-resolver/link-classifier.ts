@@ -12,10 +12,16 @@ export interface ClassificationResult {
 
 const US_CODE_RE = /(\d+)\s*U\.?S\.?C\.?A?\.?\s*§?\s*(\d+\w*)/i;
 const CFR_RE = /(\d+)\s*C\.?F\.?R\.?\s*§?\s*([\d.]+)/i;
+const IRC_RE = /I\.?R\.?C\.?\s*§\s*(\d+)/i;
+const TREAS_REG_RE = /Treas\.?\s*Reg\.?\s*§\s*([\d.]+(?:-[\d]+)?)/i;
+const REG_SECTION_RE = /^Reg\.?\s*§\s*([\d.]+(?:-[\d]+)?)/i;
 const UCC_RE = /U\.?C\.?C\.?\s*§?\s*([\d-]+)/i;
 const RESTATEMENT_RE =
     /Restatement\s+\((?:Second|Third|Fourth)\)\s+of\s+/i;
 const PUBLIC_LAW_RE = /P\.?L\.?\s+\d+-\d+/i;
+const REV_RUL_RE = /Rev\.?\s*Rul\.?\s+[\d-]+/i;
+const REV_PROC_RE = /Rev\.?\s*Proc\.?\s+[\d-]+/i;
+const PLR_RE = /PLR\s+\d+/i;
 
 // ============================================================
 // US Case patterns
@@ -103,6 +109,33 @@ export function classifyLink(linkText: string): ClassificationResult {
     // --- US Statute ---
     let m: RegExpExecArray | null;
 
+    m = IRC_RE.exec(raw);
+    if (m) {
+        return {
+            category: "us-statute",
+            confidence: 0.95,
+            parsed: { title: "26", section: m[1], raw },
+        };
+    }
+
+    m = TREAS_REG_RE.exec(raw);
+    if (m) {
+        return {
+            category: "us-statute",
+            confidence: 0.95,
+            parsed: { title: "26", section: m[1], raw },
+        };
+    }
+
+    m = REG_SECTION_RE.exec(raw);
+    if (m) {
+        return {
+            category: "us-statute",
+            confidence: 0.85,
+            parsed: { title: "26", section: m[1], raw },
+        };
+    }
+
     m = US_CODE_RE.exec(raw);
     if (m) {
         return {
@@ -142,6 +175,14 @@ export function classifyLink(linkText: string): ClassificationResult {
         return {
             category: "us-statute",
             confidence: 0.90,
+            parsed: { raw },
+        };
+    }
+
+    if (REV_RUL_RE.test(raw) || REV_PROC_RE.test(raw) || PLR_RE.test(raw)) {
+        return {
+            category: "us-statute",
+            confidence: 0.85,
             parsed: { raw },
         };
     }
