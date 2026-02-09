@@ -1,9 +1,10 @@
 import { App, Notice, TFile } from "obsidian";
 import type { LawNoteSettings } from "../types";
-import type { FetchResult, UnresolvedLink } from "./types";
+import type { FetchResult, LinkCategory, UnresolvedLink } from "./types";
 import { scanForUnresolvedLinks } from "./link-scanner";
 import { LinkReviewModal } from "./link-review-modal";
 import { ProgressModal } from "../ui/progress-modal";
+import { CourseSelectModal, type CourseSelection } from "../ui/course-select-modal";
 import { ensureFolderExists, sanitizeFilename } from "../utils/vault-helpers";
 import { BaseFetcher } from "./fetchers/base-fetcher";
 import { CourtListenerFetcher } from "./fetchers/courtlistener-fetcher";
@@ -17,49 +18,94 @@ export function runLinkResolver(
     app: App,
     settings: LawNoteSettings
 ): void {
-    const scopeFolder =
-        settings.resolverScanScope === "output-folder"
-            ? settings.outputFolder
-            : "";
+    // Step 1: Course selection — determine base output folder
+    selectCourse(app, settings.outputFolder).then((courseSelection) => {
+        if (!courseSelection) return;
 
-    const unresolvedLinks = scanForUnresolvedLinks(app, scopeFolder);
+        const baseFolder = courseSelection.courseName
+            ? `${settings.outputFolder}/${courseSelection.courseName}`
+            : settings.outputFolder;
 
-    if (unresolvedLinks.length === 0) {
-        new Notice("No unresolved links found! (未找到未解析的链接)");
-        return;
+        // Step 2: Scan for unresolved links (scope to course folder)
+        const scopeFolder =
+            settings.resolverScanScope === "output-folder"
+                ? baseFolder
+                : "";
+
+        const unresolvedLinks = scanForUnresolvedLinks(app, scopeFolder);
+
+        if (unresolvedLinks.length === 0) {
+            new Notice("No unresolved links found! (未找到未解析的链接)");
+            return;
+        }
+
+        // Filter out links that are clearly not legal references
+        const classifiableLinks = unresolvedLinks.filter(
+            (l) => l.category !== "unknown" || l.referenceCount >= 2
+        );
+
+        const linksToShow =
+            classifiableLinks.length > 0 ? unresolvedLinks : unresolvedLinks;
+
+        new LinkReviewModal(
+            app,
+            linksToShow,
+            (selectedLinks) =>
+                resolveLinks(app, settings, selectedLinks, baseFolder),
+            () => {} // onCancel: no-op
+        ).open();
+    });
+}
+
+function selectCourse(
+    app: App,
+    outputFolder: string
+): Promise<CourseSelection | null> {
+    return new Promise((resolve) => {
+        const modal = new CourseSelectModal(
+            app,
+            outputFolder,
+            (selection) => resolve(selection),
+            () => resolve(null)
+        );
+        modal.open();
+    });
+}
+
+/**
+ * Map link category to subfolder name within the course folder.
+ */
+function categorySubfolder(category: LinkCategory): string {
+    switch (category) {
+        case "us-case":
+        case "cn-case":
+            return "Cases";
+        case "us-statute":
+        case "cn-law":
+            return "Regulations";
+        default:
+            return "References";
     }
-
-    // Filter out links that are clearly not legal references
-    const classifiableLinks = unresolvedLinks.filter(
-        (l) => l.category !== "unknown" || l.referenceCount >= 2
-    );
-
-    const linksToShow =
-        classifiableLinks.length > 0 ? unresolvedLinks : unresolvedLinks;
-
-    new LinkReviewModal(
-        app,
-        linksToShow,
-        (selectedLinks) => resolveLinks(app, settings, selectedLinks),
-        () => {} // onCancel: no-op
-    ).open();
 }
 
 async function resolveLinks(
     app: App,
     settings: LawNoteSettings,
-    links: UnresolvedLink[]
+    links: UnresolvedLink[],
+    baseFolder: string
 ): Promise<void> {
     if (links.length === 0) {
         new Notice("No links selected for resolution.");
         return;
     }
 
-    const outputFolder = settings.resolvedLinksFolder
-        ? settings.resolvedLinksFolder
-        : `${settings.outputFolder}/References`;
-
-    await ensureFolderExists(app.vault, outputFolder);
+    // Ensure all needed subfolders exist
+    const neededSubfolders = new Set(
+        links.map((l) => categorySubfolder(l.category))
+    );
+    for (const sub of neededSubfolders) {
+        await ensureFolderExists(app.vault, `${baseFolder}/${sub}`);
+    }
 
     const progressModal = new ProgressModal(app);
     progressModal.open();
@@ -85,8 +131,9 @@ async function resolveLinks(
             const result = await fetchLink(link, settings);
 
             if (result.success) {
+                const subfolder = categorySubfolder(link.category);
                 const safeName = sanitizeFilename(link.linkText);
-                const path = `${outputFolder}/${safeName}.md`;
+                const path = `${baseFolder}/${subfolder}/${safeName}.md`;
 
                 const existing =
                     app.vault.getAbstractFileByPath(path);
@@ -102,7 +149,7 @@ async function resolveLinks(
                 await app.vault.create(path, result.content);
                 successes.push(link.linkText);
                 progressModal.updatePreview(
-                    `Created: ${link.linkText} (${result.source})`
+                    `Created: ${link.linkText} → ${subfolder}/ (${result.source})`
                 );
             } else {
                 failures.push({
@@ -130,7 +177,7 @@ async function resolveLinks(
         ? `Cancelled. Resolved ${successes.length}/${links.length} links.`
         : `Resolved ${successes.length}/${links.length} links. ${failures.length} failed.`;
 
-    new Notice(msg + ` Pages in ${outputFolder}/`);
+    new Notice(msg + ` Pages in ${baseFolder}/`);
 
     if (failures.length > 0 && failures.length <= 5) {
         new Notice(

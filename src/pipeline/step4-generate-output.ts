@@ -19,6 +19,7 @@ import { parallelMap } from "../utils/parallel";
 import { classifyLink } from "../link-resolver/link-classifier";
 import { CornellLiiFetcher } from "../link-resolver/fetchers/cornell-lii-fetcher";
 import { CnLawFetcher } from "../link-resolver/fetchers/cn-law-fetcher";
+import { normalizeCitation } from "../utils/citation-normalizer";
 
 // ============================================================
 // Source section markers — invisible in Obsidian reading mode
@@ -389,24 +390,25 @@ export async function runStep4(
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
 
 function extractStatuteLinks(contents: string[]): string[] {
-    const seen = new Set<string>();
-    const result: string[] = [];
+    const seenNormalized = new Map<string, string>(); // normalized → shortest raw
 
     for (const content of contents) {
         let match: RegExpExecArray | null;
         const re = new RegExp(WIKILINK_RE.source, "g");
         while ((match = re.exec(content)) !== null) {
             const linkTarget = match[1].trim();
-            if (seen.has(linkTarget)) continue;
-            seen.add(linkTarget);
 
             const { category } = classifyLink(linkTarget);
-            if (category === "us-statute" || category === "cn-law") {
-                result.push(linkTarget);
+            if (category !== "us-statute" && category !== "cn-law") continue;
+
+            const normalized = normalizeCitation(linkTarget);
+            const existing = seenNormalized.get(normalized);
+            if (!existing || linkTarget.length < existing.length) {
+                seenNormalized.set(normalized, linkTarget);
             }
         }
     }
-    return result;
+    return Array.from(seenNormalized.values());
 }
 
 function generateStatuteStubPage(linkText: string, liiUrl: string | null): string {

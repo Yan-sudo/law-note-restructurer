@@ -65,6 +65,19 @@ For example, "Aggregate Principle" and "Aggregate Theory of Partnership Taxation
 same concept — use only one entry with the most specific name. If a concept is known by
 multiple names, use the primary name for "name" and list alternatives in the definition.
 
+## Citation Format Rules
+Use CONSISTENT canonical citation formats throughout:
+- Internal Revenue Code: "IRC § 721" (NOT "I.R.C. § 721", NOT "IRC §721")
+- Treasury Regulations: "Treas. Reg. § 1.721-1" (NOT "Reg. § 1.721-1")
+- US Code: "26 USC § 721" (NOT "26 U.S.C.A. § 721")
+- CFR: "26 CFR § 1.721" (NOT "26 C.F.R. § 1.721")
+- Do NOT add parenthetical descriptions to citation names (e.g., use "Treas. Reg. § 1.752-1(a)(1)", NOT "Treas. Reg. § 1.752-1(a)(1) (Definition of Recourse Liability)")
+
+## Principle Extraction Rules
+ONLY extract a principle if the source text explicitly discusses it with enough substance to fill a note.
+Do NOT infer or fabricate principles that are merely implied or only briefly mentioned in passing.
+A principle needs: an explicit statement in the source, supporting cases or rules, and enough content for a meaningful description.
+
 No markdown fences, no extra text. Pure JSON only.
 
 ---
@@ -149,15 +162,21 @@ Available source files: ${sourceFiles.join(", ")}`
 ${langInstruction(language)}
 ${FORMAT_RULES}
 
+## CRITICAL: No Hallucinated Links
+ONLY create [[wikilinks]] to names that appear in the Data section below (cases, principles, rules, concepts).
+Do NOT invent new concept names, principle names, or any other [[wikilinks]] that are not in the provided data.
+If the Principles or See Also section would be empty, OMIT that section entirely.
+Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
+
 ## Requirements
 1. Start DIRECTLY with --- (YAML frontmatter). Tags: law/concept, law/${concept.category}. Aliases if nameChinese exists. Date: today.
 2. # ${concept.name}${concept.nameChinese ? ` (${concept.nameChinese})` : ""}
 3. Definition in a callout: > [!note] Definition
 4. ## Cases — for each case use ### [[Case Name]]:
    State facts, holding, relevance. Separate bullets from paragraphs with blank lines.
-5. ## Principles — link via [[wikilinks]]
+5. ## Principles — ONLY if principles are provided in data below. Link via [[wikilinks]].
 6. ## Rules — state the rule plainly, list elements, show how to apply
-7. ## See Also — link related concepts
+7. ## See Also — ONLY link concepts that exist in the provided data. Omit if none.
 ${footnoteInstruction}
 
 ## Data
@@ -188,6 +207,11 @@ Write a DECISION-TREE STYLE OUTLINE that a student can use during an exam or pra
 - **Exceptions** and how to spot them
 
 Do NOT explain concepts or provide background theory — those belong in separate [[concept pages]]. This outline is purely OPERATIONAL: "if X, then check Y, result is Z."
+
+## CRITICAL: No Hallucinated Links
+ONLY create [[wikilinks]] to case names, concept names, and statute citations that appear in the Data section below.
+Do NOT invent new names or links. If a concept is not in the data, mention it as plain text, not a [[wikilink]].
+Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
 
 ## Structure Rules
 1. Use Obsidian HEADINGS: # for title, ## for major topics, ### for rules/doctrines, #### for sub-rules.
@@ -282,6 +306,12 @@ Available source files: ${sourceFiles.join(", ")}`
 ${langInstruction(language)}
 ${FORMAT_RULES}
 
+## CRITICAL: No Hallucinated Links
+ONLY create [[wikilinks]] to names that appear in the SHARED DATA section below.
+Do NOT invent new concept names, principle names, or any other [[wikilinks]] not in the data.
+If Principles or See Also would be empty, OMIT that section entirely.
+Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
+
 ===== PAGE 1: CONCEPT PAGE =====
 
 Requirements:
@@ -290,9 +320,9 @@ Requirements:
 3. Definition in a callout: > [!note] Definition
 4. ## Cases — for each case use ### [[Case Name]]:
    State facts, holding, relevance. Separate bullets from paragraphs with blank lines.
-5. ## Principles — link via [[wikilinks]]
+5. ## Principles — ONLY if principles are provided in data. Link via [[wikilinks]].
 6. ## Rules — state the rule plainly, list elements, show how to apply
-7. ## See Also — link related concepts
+7. ## See Also — ONLY link concepts from the provided data. Omit if none.
 ${footnoteInstruction}
 
 ===== PAGE 2: DASHBOARD PAGE =====
