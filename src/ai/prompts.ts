@@ -174,23 +174,30 @@ export function buildOutlinePrompt(
     entities: ExtractedEntities,
     language: "zh" | "en" | "mixed"
 ): string {
-    return `You are a legal education assistant generating a practical legal study outline in Obsidian.
+    return `You are a legal education assistant generating a RULE-BASED PRACTICAL OUTLINE in Obsidian.
 
 ## Language
 ${langInstruction(language)}
 ${FORMAT_RULES}
 
 ## Purpose
-Write a PRACTICAL STUDY GUIDE. State rules DIRECTLY and CLEARLY so a student can read, understand, and apply them. Use [[wikilinks]] as authority citations after the rule statement, not as the main content.
+Write a DECISION-TREE STYLE OUTLINE that a student can use during an exam or practice problem. Focus ENTIRELY on:
+- **When** does a rule apply? (trigger / threshold / conditions)
+- **What** are the elements to check? (numbered steps)
+- **What result** follows? (legal consequence)
+- **Exceptions** and how to spot them
+
+Do NOT explain concepts or provide background theory — those belong in separate [[concept pages]]. This outline is purely OPERATIONAL: "if X, then check Y, result is Z."
 
 ## Structure Rules
-1. Use Obsidian HEADINGS: # for title, ## for major topics, ### for subtopics, #### for sub-subtopics.
-2. Under each heading, write the RULE as a plain paragraph. State it directly and applicably.
-3. After the rule paragraph, list elements/requirements with bullet points (* or -).
-4. After the bullet list, cite authority on its own line: See [[Case Name]]; [[Principle Name]].
-5. ALWAYS put a blank line between a bullet list and the next paragraph or heading.
-6. ALWAYS put a blank line after every heading before any content.
-7. Do NOT make the entire outline only bullets. Use headings + paragraphs + bullet lists.
+1. Use Obsidian HEADINGS: # for title, ## for major topics, ### for rules/doctrines, #### for sub-rules.
+2. Under each heading, state the RULE directly as an actionable test or decision step.
+3. Use **numbered lists** for sequential steps (element tests, application steps).
+4. Use bullet points for non-sequential items (exceptions, factors, examples).
+5. Cite authority INLINE with [[wikilinks]]: "... per [[Case Name]]." — do NOT write separate "See" paragraphs.
+6. ALWAYS put a blank line between a list and the next paragraph or heading.
+7. ALWAYS put a blank line after every heading before any content.
+8. Link concept names as [[wikilinks]] on first mention only — do NOT define them here.
 
 ## Example of Correct Format
 ---
@@ -199,40 +206,48 @@ tags:
 date: 2026-02-08
 ---
 
-# Contract Law Outline
+# Partnership Taxation Outline
 
-## Formation
+## Classification: Entity vs. Aggregate
 
-### Consideration
+### When to Apply Aggregate Theory
 
-A valid contract requires consideration: a bargained-for exchange in which each party suffers a legal detriment or receives a legal benefit.
+Apply aggregate treatment when the transaction looks through the partnership to its individual partners.
 
-**Elements:**
+1. **Trigger**: Is the tax provision partner-specific (e.g., character of income, holding period, basis)?
+2. **Check**: Does the Code section or regulation explicitly treat partners as individuals?
+3. **Result**: Each partner reports their distributive share as if they directly owned the underlying assets.
 
-* Legal value (benefit to promisor or detriment to promisee)
+Exceptions:
 
-* Bargained-for exchange (mutual inducement)
+- Election under [[IRC § 754]] is entity-level but produces aggregate-like results per [[Reg. § 1.743-1]].
 
-See [[Hamer v. Sidway]] (forbearance as detriment); [[Pennsy Supply v. American Ash]] (hidden mutual benefit).
+### When to Apply Entity Theory
 
-**How to Apply:** Ask (1) did the promisee give up a legal right or confer a benefit? (2) was this the inducement for the promise?
+Apply entity treatment when the partnership acts as a separate taxpayer.
 
-### Pre-existing Duty Rule
+1. **Trigger**: Is the transaction at the partnership level (e.g., filing, elections, debt allocation)?
+2. **Check**: Does the provision address the partnership itself rather than individual partners?
+3. **Result**: The partnership is the relevant taxpayer; partners are passive recipients.
 
-Performance of a pre-existing duty is NOT valid consideration for a new promise. A modification requires NEW consideration beyond the original obligation.
+Key indicator: If the Code says "the partnership shall..." → entity treatment per [[IRC § 701]].
 
-* The pre-existing duty must be owed to the same promisor.
+## Contributions
 
-* Unforeseen circumstances may justify modification without new consideration.
+### Tax-Free Contribution: [[IRC § 721]]
 
-See [[Alaska Packers v. Domenico]].
+1. Is the transfer "to a partnership"? (formation or additional contribution)
+2. Is it "in exchange for a partnership interest"?
+3. **Result if both yes**: No gain/loss recognized. Basis carries over per [[IRC § 722]] / [[IRC § 723]].
 
-## END OF EXAMPLE — follow this format exactly.
+Exception — **Investment Company Rule** ([[IRC § 721(b)]]): If the contribution results in diversification of transferor's portfolio → gain IS recognized.
 
-## Entities to Include
-Concepts: ${JSON.stringify(entities.concepts.map((c) => ({ name: c.name, category: c.category, definition: c.definition })))}
+## END OF EXAMPLE — follow this decision-tree format exactly.
+
+## Data
+Concepts: ${JSON.stringify(entities.concepts.map((c) => ({ name: c.name, category: c.category })))}
 Cases: ${JSON.stringify(entities.cases.map((c) => ({ name: c.name, year: c.year, holding: c.holding })))}
-Rules: ${JSON.stringify(entities.rules.map((r) => ({ name: r.name, statement: r.statement, elements: r.elements, applicationSteps: r.applicationSteps })))}
+Rules: ${JSON.stringify(entities.rules.map((r) => ({ name: r.name, statement: r.statement, elements: r.elements, exceptions: r.exceptions, applicationSteps: r.applicationSteps })))}
 Principles: ${JSON.stringify(entities.principles.map((p) => ({ name: p.name, description: p.description })))}
 
 Output raw markdown starting with ---. No code fences.`;
