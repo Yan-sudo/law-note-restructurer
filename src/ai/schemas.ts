@@ -120,8 +120,8 @@ function normalizeCategory(value: unknown): string {
     return "other";
 }
 
-/** Convert null → undefined (delete), filter nulls from arrays, coerce string year */
-function sanitizeObject(obj: Record<string, unknown>, arrayKeys: string[]): void {
+/** Convert null → undefined (delete), filter nulls from arrays, coerce string year, fill missing required strings */
+function sanitizeObject(obj: Record<string, unknown>, arrayKeys: string[], requiredStrings: string[] = []): void {
     for (const key of Object.keys(obj)) {
         if (obj[key] === null) {
             delete obj[key];
@@ -135,6 +135,12 @@ function sanitizeObject(obj: Record<string, unknown>, arrayKeys: string[]): void
             obj[key] = [];
         }
     }
+    // Ensure required string fields exist
+    for (const key of requiredStrings) {
+        if (typeof obj[key] !== "string") {
+            obj[key] = "";
+        }
+    }
     // Coerce string year to number
     if (typeof obj.year === "string") {
         const n = Number(obj.year);
@@ -144,12 +150,16 @@ function sanitizeObject(obj: Record<string, unknown>, arrayKeys: string[]): void
 }
 
 const CONCEPT_ARRAYS = ["sourceReferences"];
+const CONCEPT_STRINGS = ["id", "name", "definition"];
 const CASE_ARRAYS = ["relatedConcepts", "sourceReferences"];
+const CASE_STRINGS = ["id", "name", "facts", "holding", "significance"];
 const PRINCIPLE_ARRAYS = ["relatedConcepts", "supportingCases", "sourceReferences"];
+const PRINCIPLE_STRINGS = ["id", "name", "description"];
 const RULE_ARRAYS = [
     "elements", "exceptions", "applicationSteps",
     "relatedConcepts", "supportingCases", "sourceReferences",
 ];
+const RULE_STRINGS = ["id", "name", "statement"];
 
 /**
  * Normalize raw AI output to match our Zod schemas.
@@ -195,7 +205,7 @@ export function normalizeExtractedEntities(data: Record<string, unknown>): void 
     for (const c of concepts) {
         if (c && typeof c === "object") {
             const obj = c as Record<string, unknown>;
-            sanitizeObject(obj, CONCEPT_ARRAYS);
+            sanitizeObject(obj, CONCEPT_ARRAYS, CONCEPT_STRINGS);
             obj.category = normalizeCategory(obj.category);
         }
     }
@@ -203,21 +213,21 @@ export function normalizeExtractedEntities(data: Record<string, unknown>): void 
     const cases = data.cases as unknown[];
     for (const c of cases) {
         if (c && typeof c === "object") {
-            sanitizeObject(c as Record<string, unknown>, CASE_ARRAYS);
+            sanitizeObject(c as Record<string, unknown>, CASE_ARRAYS, CASE_STRINGS);
         }
     }
 
     const principles = data.principles as unknown[];
     for (const p of principles) {
         if (p && typeof p === "object") {
-            sanitizeObject(p as Record<string, unknown>, PRINCIPLE_ARRAYS);
+            sanitizeObject(p as Record<string, unknown>, PRINCIPLE_ARRAYS, PRINCIPLE_STRINGS);
         }
     }
 
     const rules = data.rules as unknown[];
     for (const r of rules) {
         if (r && typeof r === "object") {
-            sanitizeObject(r as Record<string, unknown>, RULE_ARRAYS);
+            sanitizeObject(r as Record<string, unknown>, RULE_ARRAYS, RULE_STRINGS);
         }
     }
 }
@@ -257,7 +267,7 @@ export function normalizeRelationshipMatrix(data: Record<string, unknown>): void
     for (const e of entries) {
         if (e && typeof e === "object") {
             const entry = e as Record<string, unknown>;
-            sanitizeObject(entry, []);
+            sanitizeObject(entry, [], ["caseId", "conceptId", "relationshipType", "description"]);
 
             // Normalize relationshipType — if AI put a strength value here, swap it
             if (typeof entry.relationshipType === "string") {
