@@ -121,7 +121,8 @@ export class PipelineOrchestrator {
             this.settings,
             entities,
             matrix,
-            effectiveOutputFolder
+            effectiveOutputFolder,
+            courseSelection.courseName || undefined
         );
         this.state.generatedFiles = files;
 

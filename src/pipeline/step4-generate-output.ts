@@ -34,8 +34,9 @@ const SOURCE_END_TAG = "<!-- law-restructurer-end -->";
 const SOURCE_SECTION_RE =
     /<!-- law-restructurer-begin: (.*?) -->\n?([\s\S]*?)\n?<!-- law-restructurer-end -->/g;
 
-function wrapInSourceSection(body: string, sourceFiles: string[]): string {
-    return `${makeSourceTag(sourceFiles)}\n${body}\n${SOURCE_END_TAG}`;
+function wrapInSourceSection(body: string, sourceFiles: string[], courseName?: string): string {
+    const courseLabel = courseName ? `\n> *— ${courseName}*\n` : "";
+    return `${makeSourceTag(sourceFiles)}${courseLabel}\n${body}\n${SOURCE_END_TAG}`;
 }
 
 /**
@@ -61,18 +62,29 @@ function splitFrontmatter(content: string): [string, string] {
 function findExistingPage(
     vault: Vault,
     name: string,
-    outputFolder: string
+    outputFolder: string,
+    parentFolder?: string
 ): TFile | null {
     const normalizedTarget = normalizeConceptName(name);
     const mdFiles = vault.getMarkdownFiles();
 
+    // First: look in the current course folder
     const outputPrefix = outputFolder + "/";
-
     for (const file of mdFiles) {
         const normalizedFile = normalizeConceptName(file.basename);
-
         if (normalizedFile === normalizedTarget && file.path.startsWith(outputPrefix)) {
             return file;
+        }
+    }
+
+    // Second: look across all course folders under parentFolder
+    if (parentFolder) {
+        const parentPrefix = parentFolder + "/";
+        for (const file of mdFiles) {
+            const normalizedFile = normalizeConceptName(file.basename);
+            if (normalizedFile === normalizedTarget && file.path.startsWith(parentPrefix)) {
+                return file;
+            }
         }
     }
 
@@ -98,14 +110,16 @@ async function createOrUpdateOrAppend(
     appendMode: boolean,
     name: string,
     outputFolder: string,
-    sourceFiles: string[]
+    sourceFiles: string[],
+    parentFolder?: string,
+    courseName?: string
 ): Promise<TFile> {
     if (appendMode) {
-        const existing = findExistingPage(vault, name, outputFolder);
+        const existing = findExistingPage(vault, name, outputFolder, parentFolder);
         if (existing) {
             const oldContent = await vault.read(existing);
             const [, newBody] = splitFrontmatter(content);
-            const wrappedBody = wrapInSourceSection(newBody.trim(), sourceFiles);
+            const wrappedBody = wrapInSourceSection(newBody.trim(), sourceFiles, courseName);
 
             // Check if the existing page already has a section from any of the same sources
             let hasOverlap = false;
@@ -150,7 +164,7 @@ async function createOrUpdateOrAppend(
     // Wrap the body in source markers so future runs can track it
     const [frontmatter, body] = splitFrontmatter(content);
     const markedContent =
-        frontmatter + wrapInSourceSection(body.trim(), sourceFiles) + "\n";
+        frontmatter + wrapInSourceSection(body.trim(), sourceFiles, courseName) + "\n";
 
     const existingFile = vault.getAbstractFileByPath(path);
     if (existingFile instanceof TFile) {
@@ -186,7 +200,8 @@ export async function runStep4(
     settings: LawNoteSettings,
     entities: ExtractedEntities,
     matrix: RelationshipMatrix,
-    outputFolderOverride?: string
+    outputFolderOverride?: string,
+    courseName?: string
 ): Promise<string[]> {
     const client = new GeminiClient(settings);
     const outputFolder = outputFolderOverride ?? settings.outputFolder;
@@ -257,7 +272,7 @@ export async function runStep4(
                     sourceFiles
                 );
 
-                // Write concept page
+                // Write concept page (search sibling courses for existing page)
                 const conceptPath = `${outputFolder}/Concepts/${sanitizeFilename(concept.name)}.md`;
                 await createOrUpdateOrAppend(
                     app.vault,
@@ -266,12 +281,14 @@ export async function runStep4(
                     settings.appendToExisting,
                     concept.name,
                     outputFolder,
-                    sourceFiles
+                    sourceFiles,
+                    settings.outputFolder,
+                    courseName
                 );
                 generatedFiles.push(conceptPath);
                 allGeneratedContent.push(conceptPage);
 
-                // Write dashboard page
+                // Write dashboard page (search sibling courses for existing page)
                 const dashPath = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;
                 await createOrUpdateOrAppend(
                     app.vault,
@@ -280,7 +297,9 @@ export async function runStep4(
                     settings.appendToExisting,
                     `${concept.name} Dashboard`,
                     outputFolder,
-                    sourceFiles
+                    sourceFiles,
+                    settings.outputFolder,
+                    courseName
                 );
                 generatedFiles.push(dashPath);
                 allGeneratedContent.push(dashboardPage);
@@ -323,7 +342,9 @@ export async function runStep4(
                 settings.appendToExisting,
                 cas.name,
                 outputFolder,
-                sourceFiles
+                sourceFiles,
+                settings.outputFolder,
+                courseName
             );
             generatedFiles.push(path);
         }
