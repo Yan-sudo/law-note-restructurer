@@ -491,3 +491,24 @@
 .law-restructurer-course-select {
     min-width: 450px;
 }
+
+.law-restructurer-course-status {
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin: 8px 0;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+.law-restructurer-course-found {
+    background: rgba(0, 180, 0, 0.1);
+    color: var(--text-normal);
+    border-left: 3px solid rgba(0, 180, 0, 0.6);
+}
+
+.law-restructurer-course-new {
+    background: rgba(0, 120, 255, 0.08);
+    color: var(--text-normal);
+    border-left: 3px solid rgba(0, 120, 255, 0.5);
+}

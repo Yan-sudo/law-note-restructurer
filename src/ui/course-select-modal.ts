@@ -54,6 +54,7 @@ export class CourseSelectModal extends Modal {
                 dropdown.onChange((value) => {
                     this.courseName = value;
                     textInput.setValue(value);
+                    this.updateCourseStatus(courseStatusEl);
                     this.updateIncrementalToggle(incrementalSetting, stateInfoEl);
                 });
             });
@@ -66,9 +67,16 @@ export class CourseSelectModal extends Modal {
                 .setValue(this.courseName)
                 .onChange((value) => {
                     this.courseName = value.trim();
+                    this.updateCourseStatus(courseStatusEl);
                     this.updateIncrementalToggle(incrementalSetting, stateInfoEl);
                 });
         });
+
+        // Course status indicator
+        const courseStatusEl = contentEl.createEl("div", {
+            cls: "law-restructurer-course-status",
+        });
+        this.updateCourseStatus(courseStatusEl);
 
         // Incremental toggle
         const incrementalSetting = new Setting(contentEl)
@@ -119,6 +127,33 @@ export class CourseSelectModal extends Modal {
             .filter((child): child is TFolder => child instanceof TFolder)
             .map((f) => f.name)
             .sort();
+    }
+
+    private updateCourseStatus(statusEl: HTMLElement): void {
+        statusEl.empty();
+        if (!this.courseName) {
+            statusEl.setText(
+                `Output: ${this.outputFolder}/`
+            );
+            statusEl.className = "law-restructurer-course-status";
+            return;
+        }
+
+        const courseFolder = `${this.outputFolder}/${this.courseName}`;
+        const folder = this.app.vault.getAbstractFileByPath(courseFolder);
+        const exists = folder instanceof TFolder;
+
+        if (exists) {
+            statusEl.setText(
+                `Existing course folder found (已找到课程文件夹): ${courseFolder}/`
+            );
+            statusEl.className = "law-restructurer-course-status law-restructurer-course-found";
+        } else {
+            statusEl.setText(
+                `New course — will create (新课程，将创建): ${courseFolder}/`
+            );
+            statusEl.className = "law-restructurer-course-status law-restructurer-course-new";
+        }
     }
 
     private updateIncrementalToggle(
