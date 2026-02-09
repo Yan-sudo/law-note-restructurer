@@ -196,10 +196,11 @@ export async function runStep4(
     app: App,
     settings: LawNoteSettings,
     entities: ExtractedEntities,
-    matrix: RelationshipMatrix
+    matrix: RelationshipMatrix,
+    outputFolderOverride?: string
 ): Promise<string[]> {
     const client = new GeminiClient(settings);
-    const outputFolder = settings.outputFolder;
+    const outputFolder = outputFolderOverride ?? settings.outputFolder;
     const generatedFiles: string[] = [];
     const failedPages: string[] = [];
     const sourceFiles = entities.metadata.sourceDocuments;

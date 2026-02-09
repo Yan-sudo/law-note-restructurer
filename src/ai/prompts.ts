@@ -59,6 +59,12 @@ Return ONLY a JSON object with this structure:
 }
 
 CRITICAL: Keep each text field CONCISE (1-3 sentences max). Do NOT write long paragraphs.
+
+IMPORTANT: Do NOT create multiple entries for the same legal concept under different names.
+For example, "Aggregate Principle" and "Aggregate Theory of Partnership Taxation" are the
+same concept — use only one entry with the most specific name. If a concept is known by
+multiple names, use the primary name for "name" and list alternatives in the definition.
+
 No markdown fences, no extra text. Pure JSON only.
 
 ---

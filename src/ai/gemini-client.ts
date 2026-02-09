@@ -160,33 +160,41 @@ function normalizeData(data: Record<string, unknown>): void {
     }
 }
 
+function tryParseAndValidate<T>(json: string, schema: z.ZodSchema<T>): T {
+    const parsed = JSON.parse(json);
+    normalizeData(parsed);
+    return schema.parse(parsed);
+}
+
 function parseAndValidate<T>(raw: string, schema: z.ZodSchema<T>): T {
     const json = extractJsonFromResponse(raw);
 
     // First attempt: parse + normalize + validate
     try {
-        const parsed = JSON.parse(json);
-        normalizeData(parsed);
-        return schema.parse(parsed);
+        return tryParseAndValidate(json, schema);
     } catch (firstError) {
         console.warn("[law-restructurer] JSON parse failed, attempting repair...", firstError);
     }
 
-    // Second attempt: repair truncated JSON
-    const repaired = repairTruncatedJson(json);
+    // Second attempt: fix unescaped quotes/control chars
+    const sanitized = fixUnescapedQuotes(json);
     try {
-        const parsed = JSON.parse(repaired);
-        normalizeData(parsed);
-        return schema.parse(parsed);
+        return tryParseAndValidate(sanitized, schema);
     } catch (secondError) {
-        console.warn("[law-restructurer] Repaired JSON also failed, trying aggressive repair...", secondError);
+        console.warn("[law-restructurer] Sanitized JSON failed, trying truncation repair...", secondError);
     }
 
-    // Third attempt: aggressive repair
-    const aggressiveRepaired = aggressiveRepairJson(json);
-    const parsed = JSON.parse(aggressiveRepaired);
-    normalizeData(parsed);
-    return schema.parse(parsed);
+    // Third attempt: repair truncated JSON
+    const repaired = repairTruncatedJson(sanitized);
+    try {
+        return tryParseAndValidate(repaired, schema);
+    } catch (thirdError) {
+        console.warn("[law-restructurer] Repaired JSON also failed, trying aggressive repair...", thirdError);
+    }
+
+    // Fourth attempt: aggressive repair
+    const aggressiveRepaired = aggressiveRepairJson(sanitized);
+    return tryParseAndValidate(aggressiveRepaired, schema);
 }
 
 function extractJsonFromResponse(text: string): string {
@@ -354,6 +362,65 @@ function aggressiveRepairJson(json: string): string {
     }
 
     return result;
+}
+
+/**
+ * Fix unescaped quotes and control characters inside JSON string values.
+ * Gemini sometimes produces: "facts": "The court said "hello" to..."
+ * which breaks JSON.parse because the internal quotes aren't escaped.
+ */
+function fixUnescapedQuotes(json: string): string {
+    const result: string[] = [];
+    let i = 0;
+    let inString = false;
+    let escaped = false;
+
+    while (i < json.length) {
+        const ch = json[i];
+
+        if (escaped) {
+            result.push(ch);
+            escaped = false;
+            i++;
+            continue;
+        }
+
+        if (ch === "\\") {
+            result.push(ch);
+            escaped = true;
+            i++;
+            continue;
+        }
+
+        if (ch === '"') {
+            if (!inString) {
+                inString = true;
+                result.push(ch);
+            } else {
+                // Is this a closing quote or an unescaped internal quote?
+                // Look at what follows (skip whitespace)
+                const rest = json.slice(i + 1);
+                const nextMatch = rest.match(/^\s*([,\]}\n:]|$)/);
+                if (nextMatch) {
+                    // Followed by structural char → closing quote
+                    inString = false;
+                    result.push(ch);
+                } else {
+                    // Internal unescaped quote → escape it
+                    result.push('\\"');
+                }
+            }
+        } else if (inString && (ch === "\n" || ch === "\r" || ch === "\t")) {
+            // Escape literal control characters inside strings
+            if (ch === "\n") result.push("\\n");
+            else if (ch === "\r") result.push("\\r");
+            else if (ch === "\t") result.push("\\t");
+        } else {
+            result.push(ch);
+        }
+        i++;
+    }
+    return result.join("");
 }
 
 function removeTrailingCommas(json: string): string {
