@@ -67,22 +67,16 @@ function findExistingPage(
     const mdFiles = vault.getMarkdownFiles();
 
     const outputPrefix = outputFolder + "/";
-    let bestMatch: TFile | null = null;
 
     for (const file of mdFiles) {
         const normalizedFile = normalizeConceptName(file.basename);
 
-        if (normalizedFile === normalizedTarget) {
-            if (file.path.startsWith(outputPrefix)) {
-                return file; // Prefer output folder match
-            }
-            if (!bestMatch) {
-                bestMatch = file;
-            }
+        if (normalizedFile === normalizedTarget && file.path.startsWith(outputPrefix)) {
+            return file;
         }
     }
 
-    return bestMatch;
+    return null;
 }
 
 // ============================================================
