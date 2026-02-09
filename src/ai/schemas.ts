@@ -154,45 +154,84 @@ const RULE_ARRAYS = [
 /**
  * Normalize raw AI output to match our Zod schemas.
  * Call this BEFORE passing data to schema.parse().
+ * Also fills in defaults for missing top-level fields (handles truncated responses).
  */
 export function normalizeExtractedEntities(data: Record<string, unknown>): void {
-    const concepts = data.concepts;
-    if (Array.isArray(concepts)) {
-        for (const c of concepts) {
-            if (c && typeof c === "object") {
-                const obj = c as Record<string, unknown>;
-                sanitizeObject(obj, CONCEPT_ARRAYS);
-                obj.category = normalizeCategory(obj.category);
+    // Ensure all top-level arrays exist (handles truncated JSON)
+    if (!Array.isArray(data.concepts)) data.concepts = [];
+    if (!Array.isArray(data.cases)) data.cases = [];
+    if (!Array.isArray(data.principles)) data.principles = [];
+    if (!Array.isArray(data.rules)) data.rules = [];
+
+    // Ensure metadata exists
+    if (!data.metadata || typeof data.metadata !== "object") {
+        data.metadata = {
+            sourceDocuments: [],
+            extractionTimestamp: new Date().toISOString(),
+            modelUsed: "unknown",
+            totalTokensUsed: 0,
+        };
+    } else {
+        const meta = data.metadata as Record<string, unknown>;
+        if (!Array.isArray(meta.sourceDocuments)) meta.sourceDocuments = [];
+        if (!meta.extractionTimestamp) meta.extractionTimestamp = new Date().toISOString();
+        if (!meta.modelUsed) meta.modelUsed = "unknown";
+        if (typeof meta.totalTokensUsed !== "number") meta.totalTokensUsed = 0;
+    }
+
+    // Remove last element of each array if it looks incomplete (truncation artifact)
+    for (const key of ["concepts", "cases", "principles", "rules"] as const) {
+        const arr = data[key] as unknown[];
+        if (arr.length > 0) {
+            const last = arr[arr.length - 1];
+            if (last && typeof last === "object" && !isCompleteEntity(last as Record<string, unknown>, key)) {
+                console.warn(`[law-restructurer] Removing incomplete last ${key} entry (likely truncated)`);
+                arr.pop();
             }
         }
     }
 
-    const cases = data.cases;
-    if (Array.isArray(cases)) {
-        for (const c of cases) {
-            if (c && typeof c === "object") {
-                sanitizeObject(c as Record<string, unknown>, CASE_ARRAYS);
-            }
+    const concepts = data.concepts as unknown[];
+    for (const c of concepts) {
+        if (c && typeof c === "object") {
+            const obj = c as Record<string, unknown>;
+            sanitizeObject(obj, CONCEPT_ARRAYS);
+            obj.category = normalizeCategory(obj.category);
         }
     }
 
-    const principles = data.principles;
-    if (Array.isArray(principles)) {
-        for (const p of principles) {
-            if (p && typeof p === "object") {
-                sanitizeObject(p as Record<string, unknown>, PRINCIPLE_ARRAYS);
-            }
+    const cases = data.cases as unknown[];
+    for (const c of cases) {
+        if (c && typeof c === "object") {
+            sanitizeObject(c as Record<string, unknown>, CASE_ARRAYS);
         }
     }
 
-    const rules = data.rules;
-    if (Array.isArray(rules)) {
-        for (const r of rules) {
-            if (r && typeof r === "object") {
-                sanitizeObject(r as Record<string, unknown>, RULE_ARRAYS);
-            }
+    const principles = data.principles as unknown[];
+    for (const p of principles) {
+        if (p && typeof p === "object") {
+            sanitizeObject(p as Record<string, unknown>, PRINCIPLE_ARRAYS);
         }
     }
+
+    const rules = data.rules as unknown[];
+    for (const r of rules) {
+        if (r && typeof r === "object") {
+            sanitizeObject(r as Record<string, unknown>, RULE_ARRAYS);
+        }
+    }
+}
+
+/** Check if an entity object has its essential fields (id + name at minimum). */
+function isCompleteEntity(obj: Record<string, unknown>, type: string): boolean {
+    if (!obj.id || typeof obj.id !== "string") return false;
+    if (!obj.name || typeof obj.name !== "string") return false;
+    // Cases need at minimum facts + holding
+    if (type === "cases") {
+        if (!obj.facts || typeof obj.facts !== "string") return false;
+        if (!obj.holding || typeof obj.holding !== "string") return false;
+    }
+    return true;
 }
 
 export function normalizeRelationshipMatrix(data: Record<string, unknown>): void {
