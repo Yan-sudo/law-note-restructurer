@@ -45,6 +45,12 @@ Automatically detects near-duplicate entities (e.g. "Aggregate Principle" vs "Ag
 
 自动检测近似重复实体（如"Aggregate Principle"与"Aggregate Theory of Partnership Taxation"），一键合并。
 
+### Cross-course Links / 跨课程链接
+
+When the same concept (e.g. "Adjusted Basis") appears in multiple courses (PIT and Partnership Tax), the plugin automatically adds "See also" callouts linking to the other course's version. Both pages are updated — no manual linking needed.
+
+当同一概念（如"Adjusted Basis"）出现在多个课程（PIT 和 Partnership Tax）时，插件会自动在页面底部添加"另见"提示框，链接到其他课程的对应页面。双向更新，无需手动操作。
+
 ### Link Resolver / 链接解析
 
 Scans your vault for broken wikilinks, classifies them by type, and creates pages by fetching from free legal databases:

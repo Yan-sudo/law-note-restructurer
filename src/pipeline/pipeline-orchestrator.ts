@@ -14,6 +14,7 @@ import { CourseSelectModal, type CourseSelection } from "../ui/course-select-mod
 import { loadPipelineState, savePipelineState } from "./state-persistence";
 import { mergeEntities, deduplicateEntities } from "./entity-merger";
 import { ensureFolderExists } from "../utils/vault-helpers";
+import { addCrossCourseLinks } from "../utils/cross-course-linker";
 
 export class PipelineOrchestrator {
     private app: App;
@@ -134,13 +135,26 @@ export class PipelineOrchestrator {
             allSourceFiles
         );
 
+        // Cross-course linking: add "See also" links for shared concepts/cases
+        let crossLinked = 0;
+        if (courseSelection.courseName) {
+            crossLinked = await addCrossCourseLinks(
+                this.app.vault,
+                this.settings.outputFolder,
+                courseSelection.courseName
+            );
+        }
+
         this.state.currentStep = "complete";
 
         const courseLabel = courseSelection.courseName
             ? ` [${courseSelection.courseName}]`
             : "";
+        const crossMsg = crossLinked > 0
+            ? ` ${crossLinked} cross-course links added. (${crossLinked} 个跨课程链接)`
+            : "";
         new Notice(
-            `Pipeline complete!${courseLabel} Generated ${files.length} files. (流程完成！已生成 ${files.length} 个文件)`
+            `Pipeline complete!${courseLabel} Generated ${files.length} files.${crossMsg} (流程完成！已生成 ${files.length} 个文件)`
         );
     }
 
