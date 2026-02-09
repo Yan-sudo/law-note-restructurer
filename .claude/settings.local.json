@@ -8,7 +8,10 @@
       "WebFetch(domain:supreme.justia.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:case.law)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node esbuild.config.mjs:*)",
+      "Bash(./node_modules/.bin/tsc:*)"
     ]
   }
 }

@@ -120,22 +120,36 @@ function normalizeCategory(value: unknown): string {
     return "other";
 }
 
-function nullToUndefined(obj: Record<string, unknown>): void {
+/** Convert null → undefined (delete), filter nulls from arrays, coerce string year */
+function sanitizeObject(obj: Record<string, unknown>, arrayKeys: string[]): void {
     for (const key of Object.keys(obj)) {
         if (obj[key] === null) {
             delete obj[key];
         } else if (Array.isArray(obj[key])) {
-            // Filter null elements from arrays
             obj[key] = (obj[key] as unknown[]).filter((v) => v !== null);
         }
     }
-    // Coerce string year to number if present
+    // Ensure expected array fields exist
+    for (const key of arrayKeys) {
+        if (!Array.isArray(obj[key])) {
+            obj[key] = [];
+        }
+    }
+    // Coerce string year to number
     if (typeof obj.year === "string") {
         const n = Number(obj.year);
         if (!isNaN(n)) obj.year = n;
         else delete obj.year;
     }
 }
+
+const CONCEPT_ARRAYS = ["sourceReferences"];
+const CASE_ARRAYS = ["relatedConcepts", "sourceReferences"];
+const PRINCIPLE_ARRAYS = ["relatedConcepts", "supportingCases", "sourceReferences"];
+const RULE_ARRAYS = [
+    "elements", "exceptions", "applicationSteps",
+    "relatedConcepts", "supportingCases", "sourceReferences",
+];
 
 /**
  * Normalize raw AI output to match our Zod schemas.
@@ -146,10 +160,9 @@ export function normalizeExtractedEntities(data: Record<string, unknown>): void 
     if (Array.isArray(concepts)) {
         for (const c of concepts) {
             if (c && typeof c === "object") {
-                nullToUndefined(c as Record<string, unknown>);
-                (c as Record<string, unknown>).category = normalizeCategory(
-                    (c as Record<string, unknown>).category
-                );
+                const obj = c as Record<string, unknown>;
+                sanitizeObject(obj, CONCEPT_ARRAYS);
+                obj.category = normalizeCategory(obj.category);
             }
         }
     }
@@ -158,7 +171,7 @@ export function normalizeExtractedEntities(data: Record<string, unknown>): void 
     if (Array.isArray(cases)) {
         for (const c of cases) {
             if (c && typeof c === "object") {
-                nullToUndefined(c as Record<string, unknown>);
+                sanitizeObject(c as Record<string, unknown>, CASE_ARRAYS);
             }
         }
     }
@@ -167,7 +180,7 @@ export function normalizeExtractedEntities(data: Record<string, unknown>): void 
     if (Array.isArray(principles)) {
         for (const p of principles) {
             if (p && typeof p === "object") {
-                nullToUndefined(p as Record<string, unknown>);
+                sanitizeObject(p as Record<string, unknown>, PRINCIPLE_ARRAYS);
             }
         }
     }
@@ -176,7 +189,7 @@ export function normalizeExtractedEntities(data: Record<string, unknown>): void 
     if (Array.isArray(rules)) {
         for (const r of rules) {
             if (r && typeof r === "object") {
-                nullToUndefined(r as Record<string, unknown>);
+                sanitizeObject(r as Record<string, unknown>, RULE_ARRAYS);
             }
         }
     }
@@ -188,7 +201,7 @@ export function normalizeRelationshipMatrix(data: Record<string, unknown>): void
         for (const e of entries) {
             if (e && typeof e === "object") {
                 const entry = e as Record<string, unknown>;
-                nullToUndefined(entry);
+                sanitizeObject(entry, []);
                 if (typeof entry.relationshipType === "string") {
                     const lower = entry.relationshipType.toLowerCase().trim();
                     entry.relationshipType = VALID_REL_TYPES.has(lower)
