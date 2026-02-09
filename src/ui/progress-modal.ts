@@ -4,7 +4,11 @@ export class ProgressModal extends Modal {
     private stepLabel: HTMLElement | null = null;
     private progressFill: HTMLElement | null = null;
     private previewArea: HTMLElement | null = null;
+    private errorArea: HTMLElement | null = null;
+    private cancelBtn: HTMLElement | null = null;
     private cancelCallback: (() => void) | null = null;
+    private errorLog: string[] = [];
+    private stopped = false;
 
     constructor(app: App) {
         super(app);
@@ -27,12 +31,20 @@ export class ProgressModal extends Modal {
         this.previewArea = contentEl.createDiv("law-restructurer-preview-area");
         this.previewArea.setText("Waiting for AI response...");
 
-        const cancelBtn = contentEl.createEl("button", {
+        // Error log area (hidden initially)
+        this.errorArea = contentEl.createDiv("law-restructurer-error-area");
+        this.errorArea.style.display = "none";
+
+        this.cancelBtn = contentEl.createEl("button", {
             text: "Cancel (取消)",
         });
-        cancelBtn.addEventListener("click", () => {
-            this.cancelCallback?.();
-            this.close();
+        this.cancelBtn.addEventListener("click", () => {
+            if (this.stopped) {
+                this.close();
+            } else {
+                this.cancelCallback?.();
+                this.close();
+            }
         });
     }
 
@@ -62,12 +74,61 @@ export class ProgressModal extends Modal {
 
     updatePreview(text: string): void {
         if (this.previewArea) {
-            // Show last 500 chars
-            const display =
-                text.length > 500 ? "..." + text.slice(-500) : text;
-            this.previewArea.setText(display);
+            // Append as a new line in the log
+            const line = this.previewArea.createDiv("law-restructurer-preview-line");
+            line.setText(text);
             this.previewArea.scrollTop = this.previewArea.scrollHeight;
         }
+    }
+
+    /**
+     * Log an error — shown in a distinct error area that's selectable/copyable.
+     * Does NOT close the modal.
+     */
+    addError(message: string): void {
+        this.errorLog.push(message);
+        if (this.errorArea) {
+            this.errorArea.style.display = "block";
+            const line = this.errorArea.createDiv("law-restructurer-error-line");
+            line.setText(message);
+            this.errorArea.scrollTop = this.errorArea.scrollHeight;
+        }
+    }
+
+    /**
+     * Switch to "stopped" state — shows all errors, changes button to Close.
+     * Modal stays open until user explicitly closes it.
+     */
+    showStopped(title: string): void {
+        this.stopped = true;
+        if (this.stepLabel) {
+            this.stepLabel.setText(title);
+            this.stepLabel.addClass("law-restructurer-error-title");
+        }
+        if (this.progressFill) {
+            this.progressFill.removeClass("law-restructurer-progress-bar-indeterminate");
+            this.progressFill.addClass("law-restructurer-progress-bar-error");
+        }
+        if (this.cancelBtn) {
+            this.cancelBtn.setText("Close (关闭)");
+        }
+        // Add copy button if there are errors
+        if (this.errorLog.length > 0 && this.errorArea) {
+            const copyBtn = this.errorArea.createEl("button", {
+                text: "Copy Errors (复制错误日志)",
+                cls: "law-restructurer-copy-btn",
+            });
+            copyBtn.addEventListener("click", () => {
+                navigator.clipboard.writeText(this.errorLog.join("\n"));
+                copyBtn.setText("Copied!");
+                setTimeout(() => copyBtn.setText("Copy Errors (复制错误日志)"), 2000);
+            });
+        }
+    }
+
+    /** Check if any errors have been logged */
+    hasErrors(): boolean {
+        return this.errorLog.length > 0;
     }
 
     onCancelClick(callback: () => void): void {

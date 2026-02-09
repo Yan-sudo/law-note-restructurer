@@ -180,6 +180,53 @@
     word-break: break-all;
 }
 
+/* Progress Modal - Error State */
+.law-restructurer-error-area {
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: var(--font-monospace);
+    font-size: 11px;
+    padding: 8px;
+    background: rgba(255, 0, 0, 0.05);
+    border: 1px solid rgba(255, 0, 0, 0.2);
+    border-radius: 4px;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    user-select: text;
+}
+
+.law-restructurer-error-line {
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 0, 0, 0.1);
+    color: var(--text-error, #e03e3e);
+}
+
+.law-restructurer-error-line:last-of-type {
+    border-bottom: none;
+}
+
+.law-restructurer-error-title {
+    color: var(--text-error, #e03e3e) !important;
+}
+
+.law-restructurer-progress-bar-error {
+    background: var(--text-error, #e03e3e) !important;
+    width: 100% !important;
+}
+
+.law-restructurer-copy-btn {
+    margin-top: 8px;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.law-restructurer-preview-line {
+    padding: 1px 0;
+    color: var(--text-muted);
+}
+
 /* Entity Review Modal */
 .law-restructurer-entity-review {
     max-height: 80vh;

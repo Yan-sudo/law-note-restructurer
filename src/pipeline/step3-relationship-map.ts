@@ -53,8 +53,13 @@ export async function runStep3(
             );
         }
     } catch (error) {
-        progressModal.close();
-        new Notice(`Relationship mapping failed: ${error}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        progressModal.addError(`Relationship mapping failed:\n${errMsg}`);
+        progressModal.showStopped("Relationship Mapping Failed (关系映射失败)");
+        await new Promise<void>((resolve) => {
+            const origClose = progressModal.onClose.bind(progressModal);
+            progressModal.onClose = () => { origClose(); resolve(); };
+        });
         return null;
     }
 

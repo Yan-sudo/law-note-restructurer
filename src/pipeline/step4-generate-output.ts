@@ -274,28 +274,16 @@ export async function runStep4(
                 progressModal.setProgress((completedSteps / totalSteps) * 100);
             },
             (_idx, concept, error) => {
-                const errMsg = error.message.length > 120
-                    ? error.message.slice(0, 120) + "..."
-                    : error.message;
-                progressModal.updatePreview(`FAILED: ${concept.name} — ${errMsg}`);
+                progressModal.addError(`[${concept.name}] ${error.message}`);
             }
         );
 
-        // Collect failures from parallel execution and show in UI
+        // Collect failures from parallel execution — log to error area
         for (const { index, error } of conceptErrors) {
             const name = entities.concepts[index].name;
-            const errMsg = error.message.length > 100
-                ? error.message.slice(0, 100) + "..."
-                : error.message;
             console.warn(`[law-restructurer] Failed: ${name}`, error.message);
             failedPages.push(name);
-            progressModal.updatePreview(`FAILED: ${name} — ${errMsg}`);
-        }
-        if (conceptErrors.length > 0) {
-            new Notice(
-                `${conceptErrors.length} page(s) failed during generation. Check progress log for details. (${conceptErrors.length} 个页面生成失败)`,
-                6000
-            );
+            progressModal.addError(`[${name}] ${error.message}`);
         }
 
         // 2. Generate case pages (local, no AI needed)
@@ -361,6 +349,7 @@ export async function runStep4(
             const msg = error instanceof Error ? error.message : String(error);
             console.warn(`[law-restructurer] Failed to generate outline`, msg);
             failedPages.push("Outline");
+            progressModal.addError(`[Outline] ${msg}`);
         }
 
         // 5. Create regulation/statute pages from wikilinks found in generated content
@@ -371,16 +360,22 @@ export async function runStep4(
             );
         }
 
-        progressModal.close();
-
         // Report results
         const summary = `Generated ${generatedFiles.length} files in ${outputFolder}/`;
-        if (failedPages.length > 0) {
-            new Notice(
-                `${summary}\n${failedPages.length} pages failed: ${failedPages.slice(0, 5).join(", ")}${failedPages.length > 5 ? "..." : ""}`,
-                8000
+
+        if (progressModal.hasErrors()) {
+            // Keep modal open so user can see and copy errors
+            progressModal.showStopped(
+                `Done with ${failedPages.length} error(s) (完成，${failedPages.length} 个错误)`
             );
+            progressModal.updatePreview(summary);
+            // Wait for user to close
+            await new Promise<void>((resolve) => {
+                const origClose = progressModal.onClose.bind(progressModal);
+                progressModal.onClose = () => { origClose(); resolve(); };
+            });
         } else {
+            progressModal.close();
             new Notice(summary);
         }
 
@@ -393,8 +388,14 @@ export async function runStep4(
 
         return generatedFiles;
     } catch (error) {
-        progressModal.close();
-        new Notice(`Generation failed: ${error}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        progressModal.addError(`Generation failed:\n${errMsg}`);
+        progressModal.showStopped("Generation Failed (生成失败)");
+        // Wait for user to close
+        await new Promise<void>((resolve) => {
+            const origClose = progressModal.onClose.bind(progressModal);
+            progressModal.onClose = () => { origClose(); resolve(); };
+        });
         return generatedFiles;
     }
 }

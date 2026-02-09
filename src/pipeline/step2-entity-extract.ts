@@ -73,8 +73,14 @@ export async function runStep2(
             entities = deduplicateEntities(merged!);
         }
     } catch (error) {
-        progressModal.close();
-        new Notice(`Entity extraction failed: ${error}`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        progressModal.addError(`Entity extraction failed:\n${errMsg}`);
+        progressModal.showStopped("Entity Extraction Failed (实体提取失败)");
+        // Wait for user to close the modal
+        await new Promise<void>((resolve) => {
+            const origClose = progressModal.onClose.bind(progressModal);
+            progressModal.onClose = () => { origClose(); resolve(); };
+        });
         return null;
     }
 
