@@ -241,7 +241,7 @@ export async function runStep4(
                     matrix,
                     sourceFiles
                 );
-                const path = `${outputFolder}/Concepts/${concept.name}.md`;
+                const path = `${outputFolder}/Concepts/${sanitizeFilename(concept.name)}.md`;
                 await createOrUpdateOrAppend(
                     app.vault,
                     path,
@@ -270,7 +270,7 @@ export async function runStep4(
             progressModal.setProgress((currentStep / totalSteps) * 100);
 
             const content = generateCasePageLocal(cas, entities, matrix);
-            const path = `${outputFolder}/Cases/${cas.name}.md`;
+            const path = `${outputFolder}/Cases/${sanitizeFilename(cas.name)}.md`;
             await createOrUpdateOrAppend(
                 app.vault,
                 path,
@@ -335,7 +335,7 @@ export async function runStep4(
                     entities,
                     matrix
                 );
-                const path = `${outputFolder}/Dashboards/${concept.name} Dashboard.md`;
+                const path = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;
                 await createOrOverwrite(app.vault, path, content);
                 generatedFiles.push(path);
                 allGeneratedContent.push(content);
@@ -500,9 +500,9 @@ function buildCornellUrl(linkText: string): string | null {
     }
 
     // Treas. Reg. § X or Reg. § X → 26 CFR X
-    const tregMatch = linkText.match(/(?:Treas\.?\s*)?Reg\.?\s*§\s*([\d.]+)/i);
+    const tregMatch = linkText.match(/(?:Treas\.?\s*)?Reg\.?\s*§\s*([\d.]+(?:-[\d]+(?:\w+)?)?)/i);
     if (tregMatch) {
-        return `https://www.law.cornell.edu/cfr/text/26/section-${tregMatch[1]}`;
+        return `https://www.law.cornell.edu/cfr/text/26/${tregMatch[1]}`;
     }
 
     // USC
@@ -512,9 +512,9 @@ function buildCornellUrl(linkText: string): string | null {
     }
 
     // CFR
-    const cfrMatch = linkText.match(/(\d+)\s*C\.?F\.?R\.?\s*§?\s*([\d.]+)/i);
+    const cfrMatch = linkText.match(/(\d+)\s*C\.?F\.?R\.?\s*§?\s*([\d.]+(?:-[\d]+(?:\w+)?)?)/i);
     if (cfrMatch) {
-        return `https://www.law.cornell.edu/cfr/text/${cfrMatch[1]}/section-${cfrMatch[2]}`;
+        return `https://www.law.cornell.edu/cfr/text/${cfrMatch[1]}/${cfrMatch[2]}`;
     }
 
     return null;

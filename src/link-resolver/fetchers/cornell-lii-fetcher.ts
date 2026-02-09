@@ -82,20 +82,20 @@ export class CornellLiiFetcher extends BaseFetcher {
             return `https://www.law.cornell.edu/uscode/text/26/${ircMatch[1]}`;
         }
 
-        // Treas. Reg. § X.Y → 26 CFR X.Y
+        // Treas. Reg. § X.Y-Z → 26 CFR X.Y-Z
         const tregMatch = linkText.match(
-            /Treas\.?\s*Reg\.?\s*§\s*([\d.]+(?:-[\d]+)?)/i
+            /Treas\.?\s*Reg\.?\s*§\s*([\d.]+(?:-[\d]+(?:\w+)?)?)/i
         );
         if (tregMatch) {
-            return `https://www.law.cornell.edu/cfr/text/26/section-${tregMatch[1]}`;
+            return `https://www.law.cornell.edu/cfr/text/26/${tregMatch[1]}`;
         }
 
-        // Reg. § X.Y (shorthand) → 26 CFR X.Y
+        // Reg. § X.Y-Z (shorthand) → 26 CFR X.Y-Z
         const regMatch = linkText.match(
-            /^Reg\.?\s*§\s*([\d.]+(?:-[\d]+)?)/i
+            /^Reg\.?\s*§\s*([\d.]+(?:-[\d]+(?:\w+)?)?)/i
         );
         if (regMatch) {
-            return `https://www.law.cornell.edu/cfr/text/26/section-${regMatch[1]}`;
+            return `https://www.law.cornell.edu/cfr/text/26/${regMatch[1]}`;
         }
 
         // USC: law.cornell.edu/uscode/text/{title}/{section}
@@ -106,12 +106,12 @@ export class CornellLiiFetcher extends BaseFetcher {
             return `https://www.law.cornell.edu/uscode/text/${uscMatch[1]}/${uscMatch[2]}`;
         }
 
-        // CFR: law.cornell.edu/cfr/text/{title}/section-{section}
+        // CFR: law.cornell.edu/cfr/text/{title}/{section}
         const cfrMatch = linkText.match(
-            /(\d+)\s*C\.?F\.?R\.?\s*§?\s*([\d.]+)/i
+            /(\d+)\s*C\.?F\.?R\.?\s*§?\s*([\d.]+(?:-[\d]+(?:\w+)?)?)/i
         );
         if (cfrMatch) {
-            return `https://www.law.cornell.edu/cfr/text/${cfrMatch[1]}/section-${cfrMatch[2]}`;
+            return `https://www.law.cornell.edu/cfr/text/${cfrMatch[1]}/${cfrMatch[2]}`;
         }
 
         // UCC: law.cornell.edu/ucc/{article}/{section}
@@ -125,7 +125,7 @@ export class CornellLiiFetcher extends BaseFetcher {
         // Fallback using parsed data
         if (parsed.title && parsed.section) {
             if (parsed.title === "26" && parsed.section.includes(".")) {
-                return `https://www.law.cornell.edu/cfr/text/26/section-${parsed.section}`;
+                return `https://www.law.cornell.edu/cfr/text/26/${parsed.section}`;
             }
             return `https://www.law.cornell.edu/uscode/text/${parsed.title}/${parsed.section}`;
         }
@@ -188,6 +188,8 @@ export class CornellLiiFetcher extends BaseFetcher {
         const startPatterns = [
             // "26 U.S. Code § 741 - Recognition and character..."
             /\d+\s+U\.?\s*S\.?\s*Code\s*§\s*\d+\w*\s*[-–—]\s*/i,
+            // CFR: "§ 1.741-1 Recognition and character..."
+            /§\s*[\d.]+(?:-[\d]+\w*)\s+\w/,
             // "§ 741. Recognition and character..."
             /§\s*\d+\w*\.\s+\w/,
             // "(a) " at start of subsection
@@ -212,6 +214,7 @@ export class CornellLiiFetcher extends BaseFetcher {
         // End markers: trim at known footer/sidebar patterns
         const endPatterns = [
             /\n\s*U\.?\s*S\.?\s*Code\s+Toolbox/i,
+            /\n\s*CFR\s+Toolbox/i,
             /\n\s*Law about\.\.\./i,
             /\n\s*Table of Popular Names/i,
             /\n\s*Parallel Table of Authorities/i,
@@ -221,6 +224,8 @@ export class CornellLiiFetcher extends BaseFetcher {
             /\n\s*Search Cornell/i,
             /\n\s*About LII/i,
             /\n\s*Accessibility/i,
+            /\n\s*e-CFR data is current/i,
+            /\n\s*Cornell Law School/i,
         ];
 
         for (const pattern of endPatterns) {
@@ -234,6 +239,7 @@ export class CornellLiiFetcher extends BaseFetcher {
         result = result
             .replace(/\bprev\s*\|\s*next\b/gi, "")
             .replace(/^\s*-\s*U\.?\s*S\.?\s*Code\s*-\s*Notes\s*/im, "")
+            .replace(/^\s*-?\s*CFR\s*-?\s*$/im, "")
             .replace(/\n{3,}/g, "\n\n")
             .trim();
 
