@@ -26,6 +26,9 @@ export function runLinkResolver(
             ? `${settings.outputFolder}/${courseSelection.courseName}`
             : settings.outputFolder;
 
+        const courseLabel = courseSelection.courseName || "(default folder)";
+        new Notice(`Scanning "${courseLabel}" for unresolved links... (正在扫描 "${courseLabel}")`);
+
         // Step 2: Scan for unresolved links (scope to course folder)
         const scopeFolder =
             settings.resolverScanScope === "output-folder"
@@ -35,7 +38,10 @@ export function runLinkResolver(
         const unresolvedLinks = scanForUnresolvedLinks(app, scopeFolder);
 
         if (unresolvedLinks.length === 0) {
-            new Notice("No unresolved links found! (未找到未解析的链接)");
+            new Notice(
+                `No unresolved links found in "${courseLabel}". All wikilinks resolve to existing pages. (在 "${courseLabel}" 中未找到未解析的链接，所有链接均已指向现有页面)`,
+                6000
+            );
             return;
         }
 

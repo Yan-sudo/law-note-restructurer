@@ -71,7 +71,10 @@ Use CONSISTENT canonical citation formats throughout:
 - Treasury Regulations: "Treas. Reg. § 1.721-1" (NOT "Reg. § 1.721-1")
 - US Code: "26 USC § 721" (NOT "26 U.S.C.A. § 721")
 - CFR: "26 CFR § 1.721" (NOT "26 C.F.R. § 1.721")
-- Do NOT add parenthetical descriptions to citation names (e.g., use "Treas. Reg. § 1.752-1(a)(1)", NOT "Treas. Reg. § 1.752-1(a)(1) (Definition of Recourse Liability)")
+- Citation wikilinks must contain ONLY the provision number — NO descriptions, titles, or labels after it:
+  - GOOD: "IRC § 721", "Article 1", "第三条"
+  - BAD: "IRC § 721 (Nonrecognition of gain)", "Article 1 - Freedom of Speech", "第三条 基本权利"
+  - The description belongs in the surrounding text, NOT inside the [[wikilink]]
 
 ## Principle Extraction Rules
 ONLY extract a principle if the source text explicitly discusses it with enough substance to fill a note.
@@ -166,7 +169,7 @@ ${FORMAT_RULES}
 ONLY create [[wikilinks]] to names that appear in the Data section below (cases, principles, rules, concepts).
 Do NOT invent new concept names, principle names, or any other [[wikilinks]] that are not in the provided data.
 If the Principles or See Also section would be empty, OMIT that section entirely.
-Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
+Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §"). Citation wikilinks must contain ONLY the provision number — NO descriptions or titles (e.g., use [[Article 1]], NOT [[Article 1 - Freedom of Speech]]).
 
 ## Requirements
 1. Start DIRECTLY with --- (YAML frontmatter). Tags: law/concept, law/${concept.category}. Aliases if nameChinese exists. Date: today.
@@ -206,6 +209,14 @@ Write a structured COURSE OUTLINE that organizes the legal doctrines, rules, and
 ONLY create [[wikilinks]] to case names, concept names, and statute citations that appear in the Data section below.
 Do NOT invent new names or links. If a concept is not in the data, mention it as plain text, not a [[wikilink]].
 Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
+
+## CRITICAL: Citation Wikilink Format
+Citation wikilinks must contain ONLY the provision number. NEVER append descriptions, titles, or parenthetical explanations inside a [[wikilink]]:
+- CORRECT: [[Treas. Reg. § 1.721-1(a)]]
+- WRONG:  [[Treas. Reg. § 1.721-1(a) (Contributor's Own Note, Installment Obligations)]]
+- CORRECT: [[IRC § 721(b)]]
+- WRONG:  [[IRC § 721(b) (Investment Company Exception)]]
+Put the description OUTSIDE the wikilink as plain text, e.g.: [[Treas. Reg. § 1.721-1(a)]] (regarding contributor's own note).
 
 ## Content Guidelines
 1. **Define each doctrine/concept** with a brief, precise statement of the rule.
@@ -312,7 +323,7 @@ ${FORMAT_RULES}
 ONLY create [[wikilinks]] to names that appear in the SHARED DATA section below.
 Do NOT invent new concept names, principle names, or any other [[wikilinks]] not in the data.
 If Principles or See Also would be empty, OMIT that section entirely.
-Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §").
+Use canonical citation format: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1" (not "Reg. §"). Citation wikilinks must contain ONLY the provision number — NO descriptions or titles (e.g., use [[Article 1]], NOT [[Article 1 - Freedom of Speech]]).
 
 ===== PAGE 1: CONCEPT PAGE =====
 
