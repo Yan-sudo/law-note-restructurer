@@ -278,12 +278,11 @@ export async function runStep4(
             }
         );
 
-        // Collect failures from parallel execution — log to error area
+        // Collect failure names for summary
         for (const { index, error } of conceptErrors) {
             const name = entities.concepts[index].name;
             console.warn(`[law-restructurer] Failed: ${name}`, error.message);
             failedPages.push(name);
-            progressModal.addError(`[${name}] ${error.message}`);
         }
 
         // 2. Generate case pages (local, no AI needed)

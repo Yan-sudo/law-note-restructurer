@@ -74,9 +74,7 @@ export class ProgressModal extends Modal {
 
     updatePreview(text: string): void {
         if (this.previewArea) {
-            // Append as a new line in the log
-            const line = this.previewArea.createDiv("law-restructurer-preview-line");
-            line.setText(text);
+            this.previewArea.setText(text);
             this.previewArea.scrollTop = this.previewArea.scrollHeight;
         }
     }
