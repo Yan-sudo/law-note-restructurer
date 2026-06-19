@@ -205,6 +205,21 @@ export class LawNoteSettingTab extends PluginSettingTab {
                     })
             );
 
+        new Setting(containerEl)
+            .setName("Generate Flashcards")
+            .setDesc(
+                "Create Flashcards.md (Spaced Repetition plugin) and an Anki .txt export " +
+                "from rules, holdings, and definitions. (生成闪卡与 Anki 导出)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableFlashcards)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableFlashcards = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
         // --- Link Resolver Configuration ---
         containerEl.createEl("h3", { text: "Link Resolver (链接解析)" });
 

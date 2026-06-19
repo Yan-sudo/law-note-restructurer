@@ -6,6 +6,7 @@ import {
 } from "../generators/concept-page-generator";
 import { generateMatrixPage } from "../generators/matrix-generator";
 import { generateEvolutionPage, generateSynthesisPage } from "../generators/study-aids-generator";
+import { generateFlashcardsMarkdown, generateAnkiExport } from "../generators/flashcards-generator";
 import { generateOutlinePage } from "../generators/outline-generator";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
@@ -370,6 +371,17 @@ export async function runStep4(
         const synthesisPath = `${outputFolder}/Case Synthesis.md`;
         await createOrOverwrite(app.vault, synthesisPath, generateSynthesisPage(matrix, entities));
         generatedFiles.push(synthesisPath);
+
+        // 4c. Flashcards (Spaced Repetition + Anki), local, opt-out via settings
+        if (settings.enableFlashcards) {
+            const flashPath = `${outputFolder}/Flashcards.md`;
+            await createOrOverwrite(app.vault, flashPath, generateFlashcardsMarkdown(entities));
+            generatedFiles.push(flashPath);
+
+            const ankiPath = `${outputFolder}/Flashcards (Anki).txt`;
+            await createOrOverwrite(app.vault, ankiPath, generateAnkiExport(entities));
+            generatedFiles.push(ankiPath);
+        }
 
         // 5. Wait for outline if it hasn't finished yet (usually done by now)
         progressModal.setStep(`Step 4/4: Finalizing outline...`);

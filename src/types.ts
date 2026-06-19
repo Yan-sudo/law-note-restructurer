@@ -22,6 +22,8 @@ export interface LawNoteSettings {
     enableSemanticDedup: boolean;
     /** Cosine-similarity threshold (0–1) above which concepts are merged. */
     semanticDedupThreshold: number;
+    /** Generate Flashcards.md (Spaced Repetition) + an Anki export. */
+    enableFlashcards: boolean;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     concurrency: 5,
     enableSemanticDedup: false,
     semanticDedupThreshold: 0.9,
+    enableFlashcards: true,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,
