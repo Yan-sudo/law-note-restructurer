@@ -108,6 +108,7 @@ Open Settings → Law Note Restructurer:
 | Output Folder / 输出文件夹 | Where to save generated files / 生成文件的保存位置 | `LawNotes/Generated` |
 | Language / 语言 | Chinese, English, or Mixed / 中文、英文或混合 | Mixed |
 | Concurrency / 并发数 | Parallel API calls (1–10) / 并行 API 请求数（1–10） | 5 |
+| Semantic Dedup / 语义去重 | Merge same-meaning concepts via embeddings (extra cost) / 用 embedding 合并同义概念（额外开销） | Off |
 | CourtListener Token | Optional, for US case lookups / 可选，用于美国判例查询 | — |
 
 ---

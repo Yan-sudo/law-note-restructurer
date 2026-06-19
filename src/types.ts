@@ -18,6 +18,10 @@ export interface LawNoteSettings {
     enableSourceFootnotes: boolean;
     appendToExisting: boolean;
     concurrency: number;
+    /** Use embeddings to merge semantically-duplicate concepts (extra API cost). */
+    enableSemanticDedup: boolean;
+    /** Cosine-similarity threshold (0–1) above which concepts are merged. */
+    semanticDedupThreshold: number;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -36,6 +40,8 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     enableSourceFootnotes: true,
     appendToExisting: true,
     concurrency: 5,
+    enableSemanticDedup: false,
+    semanticDedupThreshold: 0.9,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,

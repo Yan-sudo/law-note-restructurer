@@ -39,6 +39,9 @@ export interface LLMClient {
         responseSchema?: Schema,
     ): Promise<T>;
 
+    /** Embed a batch of texts; `result[i]` is the vector for `texts[i]`. */
+    embedTexts(texts: string[]): Promise<number[][]>;
+
     /** Abort the in-flight request, if any. */
     abort(): void;
 

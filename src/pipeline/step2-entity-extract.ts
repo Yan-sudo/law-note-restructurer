@@ -6,7 +6,7 @@ import { ExtractedEntitiesSchema } from "../ai/schemas";
 import { ExtractedEntitiesResponseSchema } from "../ai/response-schemas";
 import { EntityReviewModal } from "../ui/entity-review-modal";
 import { ProgressModal } from "../ui/progress-modal";
-import { mergeEntities, deduplicateEntities } from "./entity-merger";
+import { mergeEntities, deduplicateEntities, semanticDeduplicateConcepts } from "./entity-merger";
 import type {
     ExtractedEntities,
     LawNoteSettings,
@@ -103,6 +103,25 @@ export async function runStep2(
         `Extracted: ${entities.concepts.length} concepts, ${entities.cases.length} cases, ` +
         `${entities.principles.length} principles, ${entities.rules.length} rules${tokenNote}`
     );
+
+    // Optional embedding-based dedup of semantically-equivalent concepts.
+    if (settings.enableSemanticDedup) {
+        try {
+            const { entities: deduped, mergedCount } = await semanticDeduplicateConcepts(
+                entities,
+                client,
+                settings.semanticDedupThreshold
+            );
+            entities = deduped;
+            if (mergedCount > 0) {
+                new Notice(
+                    `Semantic dedup merged ${mergedCount} concept(s) (语义去重合并了 ${mergedCount} 个概念)`
+                );
+            }
+        } catch (error) {
+            console.warn("[law-restructurer] Semantic dedup failed; skipping.", error);
+        }
+    }
 
     // User review
     return new Promise((resolve) => {

@@ -6,6 +6,8 @@ import type {
     LegalRule,
 } from "../types";
 import { normalizeConceptName } from "../types";
+import type { LLMClient } from "../ai/llm-provider";
+import { cosineSimilarity } from "../utils/similarity";
 
 // ============================================================
 // Similarity helpers
@@ -332,4 +334,58 @@ function mergeRules(a: LegalRule, b: LegalRule): LegalRule {
             other.sourceReferences
         ),
     };
+}
+
+// ============================================================
+// Semantic (embedding-based) deduplication
+// ============================================================
+
+/**
+ * Embedding-based concept dedup. Catches true synonyms that lexical matching
+ * misses — e.g. "Aggregate Principle" vs "Aggregate Theory of Partnership
+ * Taxation" share no substring but are semantically the same.
+ *
+ * Greedy: each concept is merged into the first already-kept concept whose
+ * embedding is at least `threshold` cosine-similar. Returns a new entities
+ * object plus the number of concepts merged away. Falls back to the unchanged
+ * input when there are <2 concepts or the embedder returns an unusable result.
+ */
+export async function semanticDeduplicateConcepts(
+    entities: ExtractedEntities,
+    embedder: Pick<LLMClient, "embedTexts">,
+    threshold: number
+): Promise<{ entities: ExtractedEntities; mergedCount: number }> {
+    const { concepts } = entities;
+    if (concepts.length < 2) return { entities, mergedCount: 0 };
+
+    const texts = concepts.map((c) => `${c.name}: ${c.definition}`);
+    const embeddings = await embedder.embedTexts(texts);
+    if (embeddings.length !== concepts.length) {
+        return { entities, mergedCount: 0 };
+    }
+
+    const result: ExtractedEntities = JSON.parse(JSON.stringify(entities));
+    const kept: LegalConcept[] = [];
+    const keptEmbeddings: number[][] = [];
+    let mergedCount = 0;
+
+    for (let i = 0; i < concepts.length; i++) {
+        let target = -1;
+        for (let k = 0; k < kept.length; k++) {
+            if (cosineSimilarity(embeddings[i], keptEmbeddings[k]) >= threshold) {
+                target = k;
+                break;
+            }
+        }
+        if (target === -1) {
+            kept.push({ ...concepts[i] });
+            keptEmbeddings.push(embeddings[i]);
+        } else {
+            kept[target] = mergeConcepts(kept[target], concepts[i]);
+            mergedCount++;
+        }
+    }
+
+    result.concepts = kept;
+    return { entities: result, mergedCount };
 }

@@ -113,6 +113,39 @@ export class LawNoteSettingTab extends PluginSettingTab {
                     })
             );
 
+        new Setting(containerEl)
+            .setName("Semantic Deduplication")
+            .setDesc(
+                "Use embeddings to merge concepts that mean the same thing but are " +
+                "named differently (e.g. 'Aggregate Principle' vs 'Aggregate Theory of " +
+                "Partnership Taxation'). Adds a small embedding API cost. (语义去重)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableSemanticDedup)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableSemanticDedup = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Semantic Similarity Threshold")
+            .setDesc(
+                "How similar two concepts must be to auto-merge (higher = stricter). " +
+                "0.90 recommended. Only used when Semantic Deduplication is on."
+            )
+            .addSlider((slider) =>
+                slider
+                    .setLimits(0.8, 0.98, 0.01)
+                    .setValue(this.plugin.settings.semanticDedupThreshold)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        this.plugin.settings.semanticDedupThreshold = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
         // --- Output Configuration ---
         containerEl.createEl("h3", { text: "Output Configuration" });
 

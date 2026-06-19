@@ -27,6 +27,9 @@ class FakeLLM implements LLMClient {
     async generateStructuredStreaming<T>(): Promise<T> {
         throw new Error("unused in this test");
     }
+    async embedTexts(texts: string[]): Promise<number[][]> {
+        return texts.map(() => [0, 0, 0]);
+    }
     abort(): void {}
     getTotalTokensUsed(): number {
         return 42;
