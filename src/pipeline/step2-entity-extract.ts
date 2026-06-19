@@ -2,6 +2,7 @@ import { App, Notice } from "obsidian";
 import { GeminiClient } from "../ai/gemini-client";
 import { buildEntityExtractionPrompt } from "../ai/prompts";
 import { ExtractedEntitiesSchema } from "../ai/schemas";
+import { ExtractedEntitiesResponseSchema } from "../ai/response-schemas";
 import { EntityReviewModal } from "../ui/entity-review-modal";
 import { ProgressModal } from "../ui/progress-modal";
 import { mergeEntities, deduplicateEntities } from "./entity-merger";
@@ -86,6 +87,15 @@ export async function runStep2(
 
     progressModal.close();
 
+    // Metadata is owned by code, not the model: record the real source files,
+    // timestamp, and model used so incremental state stays accurate.
+    entities.metadata = {
+        sourceDocuments: documents.map((d) => d.filename),
+        extractionTimestamp: new Date().toISOString(),
+        modelUsed: settings.modelName,
+        totalTokensUsed: entities.metadata?.totalTokensUsed ?? 0,
+    };
+
     new Notice(
         `Extracted: ${entities.concepts.length} concepts, ${entities.cases.length} cases, ` +
         `${entities.principles.length} principles, ${entities.rules.length} rules`
@@ -128,10 +138,15 @@ async function extractSingle(
             ExtractedEntitiesSchema,
             (_chunk, accumulated) => {
                 progressModal.updatePreview(accumulated);
-            }
+            },
+            ExtractedEntitiesResponseSchema
         );
     } else {
-        return client.generateStructured(prompt, ExtractedEntitiesSchema);
+        return client.generateStructured(
+            prompt,
+            ExtractedEntitiesSchema,
+            ExtractedEntitiesResponseSchema
+        );
     }
 }
 

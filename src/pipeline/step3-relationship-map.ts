@@ -2,6 +2,7 @@ import { App, Notice } from "obsidian";
 import { GeminiClient } from "../ai/gemini-client";
 import { buildRelationshipMappingPrompt } from "../ai/prompts";
 import { RelationshipMatrixSchema } from "../ai/schemas";
+import { RelationshipMatrixResponseSchema } from "../ai/response-schemas";
 import { RelationshipReviewModal } from "../ui/relationship-review-modal";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
@@ -44,12 +45,14 @@ export async function runStep3(
                 RelationshipMatrixSchema,
                 (_chunk, accumulated) => {
                     progressModal.updatePreview(accumulated);
-                }
+                },
+                RelationshipMatrixResponseSchema
             );
         } else {
             matrix = await client.generateStructured(
                 prompt,
-                RelationshipMatrixSchema
+                RelationshipMatrixSchema,
+                RelationshipMatrixResponseSchema
             );
         }
     } catch (error) {
