@@ -6,79 +6,60 @@
 
 ---
 
-## What It Does / 这个插件做什么
+## What It Is / 这是什么
 
-Drop in your raw legal notes (Markdown or Word docs), and the plugin automatically:
+This is a **knowledge-base _generator_ for law students**, not a do-everything AI suite. It reads your raw notes and produces a clean, wikilinked vault of concepts, case briefs, rules, outlines, and study aids. For browsing, reviewing, and querying that vault, it is designed to **plug into the best existing Obsidian plugins** rather than reinvent them — see [Works Best With](#works-best-with--推荐搭配).
 
-把你的原始法学笔记（Markdown 或 Word 文档）丢进来，插件会自动：
+这是一个**面向法学学生的知识库_生成器_**，而不是大而全的 AI 套件。它读取你的原始笔记，生成一个整洁、互链的概念页 / 案例摘要 / 规则 / 大纲 / 学习辅助的笔记库。至于浏览、复习和查询，它特意设计为**对接 Obsidian 现有的成熟插件**，而非重复造轮子——见[推荐搭配](#works-best-with--推荐搭配)。
+
+What it does on raw Markdown / Word notes / 它对原始 Markdown / Word 笔记做的事：
 
 | | English | 中文 |
 |---|---|---|
 | 1 | **Extracts** concepts, cases, principles, and rules using AI | 用 AI **提取**概念、案例、原则和规则 |
 | 2 | **Maps relationships** between cases and concepts | **映射**案例与概念之间的关系 |
-| 3 | **Generates** interlinked pages, dashboards, outlines, and a relationship matrix | **生成**互相链接的页面、仪表盘、大纲和关系矩阵 |
+| 3 | **Generates** interlinked pages, dashboards, outlines, a relationship matrix, evolution chains, synthesis tables, and flashcards | **生成**互链页面、仪表盘、大纲、关系矩阵、学说演进、案例综合表和闪卡 |
 | 4 | **Resolves** broken wikilinks by fetching from legal databases | 从法律数据库获取内容，**解析**未解析的链接 |
-
-All pages are connected with `[[wikilinks]]` for seamless Obsidian navigation.
-
-所有页面通过 `[[wikilinks]]` 互联，在 Obsidian 中无缝导航。
 
 ---
 
-## Key Features / 核心功能
+## Why It's Law-Specific / 为什么是"法学专用"
 
-### Multi-course Support / 多课程支持
+General note/AI plugins don't understand legal material. This plugin's value is the law-aware layer no generic tool provides:
 
-Organize notes by course — each gets its own folder with separate outlines, dashboards, and concept pages.
+通用笔记/AI 插件不理解法律材料。本插件的价值在于通用工具不具备的"法律感知"能力：
 
-按课程组织笔记——每门课有独立的文件夹，包含各自的大纲、仪表盘和概念页。
+- **Legal entity extraction** — concepts, cases (facts/holding/significance), rules (elements/exceptions/application steps), and principles, in an IRAC-friendly shape. / **法律实体提取**——概念、案例（事实/裁判/意义）、规则（要素/例外/适用步骤）、原则，符合 IRAC 结构。
+- **Doctrinal evolution** — chronological "established → modified → distinguished → overruled" chains per doctrine, with a Mermaid diagram. / **学说演进**——每个学说按时间排序的"确立→修正→区分→推翻"链，附 Mermaid 图。
+- **Case synthesis** — side-by-side facts/holding comparison tables for multi-case doctrines. / **案例综合**——多案例学说的事实/裁判对比表。
+- **Citation normalization & link resolving** — canonicalizes `IRC § 741` / `Treas. Reg.` / `26 CFR` / `民法典 第三条`, then fetches text from CourtListener, Justia, Cornell LII, and flk.npc.gov.cn. / **引用归一化与链接解析**——统一 `IRC § 741`、`Treas. Reg.`、`26 CFR`、`民法典 第三条` 等格式，再从 CourtListener、Justia、Cornell LII、国家法律法规数据库抓取原文。
+- **Bilingual & multi-jurisdiction** — US + China, Chinese/English/mixed output. / **双语 + 多法域**——美国 + 中国，中/英/混合输出。
 
-### Incremental Updates / 增量更新
+---
 
-Process chapters 1–4 today, add chapter 5 later — no need to redo everything. The plugin saves state after each run and merges new content automatically.
+## Works Best With / 推荐搭配
 
-今天处理第 1–4 章，以后再加第 5 章——无需全部重来。插件在每次运行后保存状态，自动合并新内容。
+This plugin **generates** the vault; pair it with these mature, general-purpose plugins for everything downstream. (Don't expect — and don't wait for — this plugin to duplicate them.)
 
-### Smart Deduplication / 智能去重
+本插件负责**生成**笔记库；下游能力请搭配下列成熟通用插件，无需也不必让本插件重复实现。
 
-Automatically detects near-duplicate entities (e.g. "Aggregate Principle" vs "Aggregate Theory of Partnership Taxation") and lets you merge them with one click.
+| Need / 需求 | Recommended plugin / 推荐插件 | How this plugin feeds it / 如何对接 |
+|---|---|---|
+| Semantic search & AI chat over the whole vault / 全库语义搜索与 AI 对话 | [**Smart Connections**](https://github.com/brianpetro/obsidian-smart-connections) (local, no API key) or Copilot | Our wikilinked, tagged pages are ideal embedding targets. Our built-in **Ask My Notes** is a zero-config, citation-grounded alternative — if you already run Smart Connections, just use that. / 我们生成的互链页是理想的嵌入对象；内置的 **Ask My Notes** 是零配置、带引用的替代方案，已用 Smart Connections 可直接用它。 |
+| Spaced-repetition review / 间隔重复复习 | [**Spaced Repetition**](https://github.com/st3v3nmw/obsidian-spaced-repetition) | We emit `Flashcards.md` in its inline `Q::A` format, tagged `#flashcard`. / 我们输出符合其行内 `Q::A` 格式、标记 `#flashcard` 的 `Flashcards.md`。 |
+| Export cards to Anki / 导出到 Anki | [**Obsidian_to_Anki**](https://github.com/Pseudonium/Obsidian_to_Anki) — or our `Flashcards (Anki).txt` | Tab-separated front/back, ready to import. / Tab 分隔的正/背面，可直接导入。 |
+| Dynamic tables & queries / 动态表格与查询 | [**Dataview**](https://github.com/blacksmithgu/obsidian-dataview) | Pages carry `tags:`/`date:` frontmatter (`law/concept`, `law/case`, …) so you can build your own live views. / 页面带 `tags:`/`date:` 元数据，可自建实时视图。 |
+| Citation library & PDFs / 文献库与 PDF | [**Zotero**](https://www.zotero.org/) + the Citations plugin | Complements our Link Resolver, which fetches primary-source text. / 与我们抓取原文的链接解析互补。 |
+| Relationship graph / 关系图谱 | Obsidian's native Graph, or Juggl / Excalibrain | Everything is `[[wikilinked]]`, so the graph works out of the box. / 全部 `[[wikilink]]` 互链，开箱即用。 |
+| Install & auto-update this plugin / 安装与自动更新 | [**BRAT**](https://github.com/TfTHacker/obsidian42-brat) | See [Install](#install--安装). / 见安装。 |
 
-自动检测近似重复实体（如"Aggregate Principle"与"Aggregate Theory of Partnership Taxation"），一键合并。
+---
 
-### Cross-course Links / 跨课程链接
+## Status / 当前状态
 
-When the same concept (e.g. "Adjusted Basis") appears in multiple courses (PIT and Partnership Tax), the plugin automatically adds "See also" callouts linking to the other course's version. Both pages are updated — no manual linking needed.
+Not yet in the Obsidian community store. Install via **BRAT** (recommended) or a manual build — see below. Desktop only (`isDesktopOnly: true`), because it makes network calls and reads local files.
 
-当同一概念（如"Adjusted Basis"）出现在多个课程（PIT 和 Partnership Tax）时，插件会自动在页面底部添加"另见"提示框，链接到其他课程的对应页面。双向更新，无需手动操作。
-
-### Link Resolver / 链接解析
-
-Scans your vault for broken wikilinks, classifies them by type, and creates pages by fetching from free legal databases:
-
-扫描仓库中的未解析链接，自动分类，并从免费法律数据库获取内容创建页面：
-
-| Type / 类型 | Source / 数据源 |
-|---|---|
-| US Cases / 美国判例 | CourtListener API → Justia → stub page with search links |
-| US Statutes / 美国法律 | Cornell LII |
-| Chinese Laws / 中国法律 | 国家法律法规数据库 (flk.npc.gov.cn) |
-| Chinese Cases / 中国案例 | Stub page with search links / 带搜索链接的兜底页 |
-
-Links are auto-classified by pattern matching (e.g. `Marbury v. Madison` → US case, `IRC § 741` → US statute, `民法典` → Chinese law). You can review before fetching.
-
-链接通过模式匹配自动分类（如 `Marbury v. Madison` → 美国案例，`IRC § 741` → 美国法律，`民法典` → 中国法律），获取前可人工审查。
-
-### Study Aids / 学习辅助
-
-Every run also produces a **Doctrinal Evolution** page (how each doctrine was established → modified → overruled, chronologically, with a Mermaid chart), **Case Synthesis** comparison tables, and **Flashcards** (Spaced Repetition + Anki export) — all derived from the structured data, no extra AI cost.
-
-每次运行还会生成**学说演进**页（按时间顺序展示每个学说如何确立→修正→推翻，附 Mermaid 图）、**案例综合**对比表，以及**闪卡**（兼容 Spaced Repetition 插件，并可导出 Anki）——全部从结构化数据生成，无额外 AI 开销。
-
-### Ask My Notes (RAG) / 问我的笔记
-
-Ask natural-language questions and get answers grounded **only** in your generated notes, each with `[[source links]]`. The plugin embeds your notes into a local index, retrieves the most relevant passages, and has Gemini answer from them.
-
-用自然语言提问，得到**仅**基于你笔记的回答，并附 `[[来源链接]]`。插件会把笔记嵌入到本地索引，检索最相关段落，再让 Gemini 据此作答。
+尚未上架 Obsidian 社区插件商店。请用 **BRAT**（推荐）或手动构建安装（见下）。仅支持桌面端，因为需要联网请求和读取本地文件。
 
 ---
 
@@ -91,18 +72,31 @@ Ask natural-language questions and get answers grounded **only** in your generat
 
 ### Install / 安装
 
+**Option A — BRAT (recommended, auto-updates) / 方式 A：BRAT（推荐，可自动更新）**
+
+1. Install the **BRAT** community plugin and enable it. / 安装并启用 **BRAT** 插件。
+2. Command palette → *BRAT: Add a beta plugin for testing* → enter `https://github.com/Yan-sudo/law-note-restructurer`. / 命令面板 → *BRAT: Add a beta plugin* → 输入仓库地址。
+3. Enable **Law Note Restructurer** in Settings → Community Plugins. / 在 设置 → 第三方插件 启用本插件。
+
+> BRAT needs a GitHub Release with `main.js`, `manifest.json`, `styles.css`. This repo ships a release workflow: push a tag matching `manifest.json` (`git tag 0.1.0 && git push --tags`) to publish one.
+>
+> BRAT 需要带 `main.js`、`manifest.json`、`styles.css` 的 GitHub Release。本仓库已内置发布工作流：推送与 `manifest.json` 版本一致的 tag 即可自动发布。
+
+**Option B — Manual build / 方式 B：手动构建**
+
 ```bash
-# Clone into your vault's plugin folder
-# 克隆到你的仓库插件目录
-git clone https://github.com/Yan-sudo/law-note-restructurer/path/to/vault/.obsidian/plugins/law-note-restructurer
+# Clone INTO your vault's plugins folder (note the two arguments)
+# 克隆到你的仓库插件目录（注意是两个参数）
+git clone https://github.com/Yan-sudo/law-note-restructurer.git \
+  /path/to/vault/.obsidian/plugins/law-note-restructurer
 
 cd /path/to/vault/.obsidian/plugins/law-note-restructurer
 npm install && npm run build
 ```
 
-Then enable **Law Note Restructurer** in Obsidian → Settings → Community Plugins.
+Then enable **Law Note Restructurer** in Obsidian → Settings → Community Plugins (reload plugins if needed).
 
-然后在 Obsidian → 设置 → 第三方插件 中启用 **Law Note Restructurer**。
+然后在 Obsidian → 设置 → 第三方插件 中启用 **Law Note Restructurer**（必要时刷新插件列表）。
 
 ### Configure / 配置
 
@@ -135,11 +129,15 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 
 | Command / 命令 | What it does / 作用 |
 |---|---|
-| **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程：选文件 → 选课程 → 提取实体 → 审查去重 → 映射关系 → 生成输出 |
-| **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体，不生成页面 |
-| **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 查找未解析链接，从法律数据库创建页面 |
-| **Ask My Notes** | Ask a question; get an answer grounded only in your generated notes, with source links / 基于你的笔记回答问题，并附来源链接 |
-| **Rebuild Notes Index** | Re-embed all notes for "Ask My Notes" (run after big changes) / 重建用于问答的笔记索引 |
+| **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程 |
+| **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体 |
+| **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 解析未解析链接 |
+| **Ask My Notes** | Ask a question; get an answer grounded only in your notes, with `[[source]]` links / 基于笔记的问答，附来源链接 |
+| **Rebuild Notes Index** | Re-embed all notes for "Ask My Notes" (run after big changes) / 重建问答索引 |
+
+> *Ask My Notes* and *Semantic Related Links* are lightweight, zero-config built-ins. If you want a more powerful, fully local semantic experience, use [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) on the generated vault instead.
+>
+> *Ask My Notes* 与 *语义相关链接* 是轻量、零配置的内置功能。若想要更强大且完全本地的语义体验，可在生成的笔记库上改用 [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections)。
 
 ---
 
@@ -176,7 +174,8 @@ LawNotes/Generated/
 │   ├── Flashcards.md             ← Spaced Repetition cards / 闪卡
 │   ├── Flashcards (Anki).txt     ← Anki import file / Anki 导入文件
 │   ├── Outline.md                ← study outline / 学习大纲
-│   └── _state.json               ← saved state for incremental updates
+│   ├── _state.json               ← saved state for incremental updates
+│   └── .rag-index.json           ← local embedding index for Ask My Notes
 ├── References/                   ← resolved link pages / 解析的链接页
 │   ├── Marbury v. Madison.md
 │   ├── IRC § 741.md
@@ -192,39 +191,21 @@ Please read this before processing sensitive material.
 
 处理敏感材料前请先阅读本节。
 
-- **Your notes are sent to Google.** When you run extraction, relationship
-  mapping, or semantic dedup, the selected note text is sent to the Google
-  Gemini API for processing. Do **not** process privileged or confidential
-  client material (e.g. attorney–client communications, sealed records) unless
-  your engagement permits sending it to a third-party AI service.
+- **Your notes are sent to Google.** Extraction, relationship mapping, semantic dedup/links, and Ask My Notes send the selected note text to the Google Gemini API. Do **not** process privileged or confidential client material unless your engagement permits sending it to a third-party AI service. (For a fully local option, run [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) with a local model on the generated notes.)
 
-  **你的笔记会发送给 Google。** 运行实体提取、关系映射或语义去重时，所选笔记文本会发送到
-  Google Gemini API 处理。除非你的工作授权允许，请**不要**处理受特权保护或保密的客户材料
-  （如律师—客户通信、密封记录）。
+  **你的笔记会发送给 Google。** 实体提取、关系映射、语义去重/相关链接、问答都会把所选文本发送到 Gemini API。除非授权允许，请**不要**处理受特权保护或保密的材料。（需要完全本地方案，可对生成的笔记使用本地模型版的 Smart Connections。）
 
-- **API key storage.** Your Gemini and CourtListener keys are stored locally and
-  unencrypted in the plugin's `data.json`, per the standard Obsidian plugin data
-  API. `data.json` is git-ignored by this repo, but treat your vault folder
-  accordingly and avoid syncing it to untrusted locations.
+- **API key storage.** Your Gemini and CourtListener keys are stored locally and unencrypted in the plugin's `data.json` (standard Obsidian plugin data API). It is git-ignored here, but avoid syncing your vault to untrusted locations.
 
-  **API 密钥存储。** 你的 Gemini 与 CourtListener 密钥按 Obsidian 标准插件数据接口，以
-  **明文**保存在插件的 `data.json` 中。本仓库已将 `data.json` 加入 `.gitignore`，但请妥善
-  对待你的仓库目录，避免同步到不受信任的位置。
+  **API 密钥存储。** 密钥以**明文**保存在插件 `data.json`（Obsidian 标准做法），本仓库已 git-ignore，但请避免把仓库同步到不受信任的位置。
 
-- **Link Resolver requests.** The "Resolve Unresolved Links" command fetches from
-  public legal databases (CourtListener, Justia, Cornell LII, flk.npc.gov.cn);
-  the link text you resolve is sent to those services.
+- **Link Resolver & external requests.** "Resolve Unresolved Links" sends link text to CourtListener, Justia, Cornell LII, and flk.npc.gov.cn.
 
-  **链接解析请求。** “解析未解析链接”命令会从公开法律数据库（CourtListener、Justia、
-  Cornell LII、flk.npc.gov.cn）获取内容，你解析的链接文本会发送给这些服务。
+  **链接解析与外部请求。** “解析未解析链接”会把链接文本发送给上述公开法律数据库。
 
-- **Reducing exposure.** Lower cost and data sent by disabling Semantic Dedup and
-  setting the Thinking Budget to *Disabled*. A fully local-model provider is on
-  the roadmap (the plugin already talks to an `LLMClient` abstraction, not Gemini
-  directly).
+- **Reducing exposure.** Disable Semantic Dedup/Links, set Thinking Budget to *Disabled*, and prefer Flash models. A fully local LLM provider is on the roadmap (the plugin already talks to an `LLMClient` abstraction, not Gemini directly).
 
-  **降低暴露。** 关闭语义去重、并将思考预算设为*关闭*可减少开销与外发数据。完全本地模型支持已在
-  规划中（插件已通过 `LLMClient` 抽象层而非直接依赖 Gemini）。
+  **降低暴露。** 关闭语义功能、思考预算设为*关闭*、优先用 Flash 模型。完全本地 LLM 已在规划中（插件已通过 `LLMClient` 抽象层）。
 
 ---
 
@@ -234,11 +215,15 @@ Please read this before processing sensitive material.
 npm install        # install dependencies / 安装依赖
 npm run dev        # watch mode (auto-rebuild) / 监听模式
 npm run build      # production build / 生产构建
-npm test           # run unit tests (Vitest) / 运行单元测试
-npm run typecheck  # type-check without emitting / 仅类型检查
+npm test           # unit tests (Vitest) / 单元测试
+npm run typecheck  # type-check only / 仅类型检查
 npm run lint       # ESLint / 代码检查
 npm run format     # Prettier / 代码格式化
 ```
+
+CI (GitHub Actions) runs typecheck + tests + build on every push; tag a version to cut a BRAT-installable release.
+
+CI（GitHub Actions）在每次推送时运行类型检查 + 测试 + 构建；打 tag 即可发布可用 BRAT 安装的版本。
 
 **Tech stack / 技术栈:** TypeScript, esbuild, [Obsidian Plugin API](https://docs.obsidian.md/), [@google/genai](https://www.npmjs.com/package/@google/genai), [zod](https://zod.dev/), [mammoth](https://www.npmjs.com/package/mammoth), [Vitest](https://vitest.dev/)
 

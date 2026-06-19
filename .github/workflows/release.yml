@@ -1,0 +1,38 @@
+name: Release
+
+# Tag a version that matches manifest.json (e.g. `git tag 0.1.0 && git push --tags`)
+# to build the plugin and publish a GitHub Release with the assets BRAT needs.
+on:
+  push:
+    tags: ["*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "Automated release of Law Note Restructurer $TAG." \
+            main.js manifest.json styles.css versions.json
