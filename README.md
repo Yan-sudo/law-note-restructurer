@@ -108,6 +108,7 @@ Open Settings → Law Note Restructurer:
 |---|---|---|
 | Gemini API Key / API 密钥 | Your Google Gemini key / 你的 Gemini 密钥 | — |
 | Model / 模型 | `gemini-2.5-pro` (best), `flash` (recommended), `flash-lite` (cheapest) | `gemini-2.5-flash` |
+| Embedding Model / 嵌入模型 | For semantic dedup, related links, and Ask My Notes / 用于语义去重、相关链接、问答 | `gemini-embedding-001` |
 | Temperature / 温度 | Lower = more focused. 0.2–0.4 recommended / 越低越精确，建议 0.2–0.4 | 0.3 |
 | Thinking Budget / 思考预算 | Gemini 2.5 reasoning effort. Model default recommended; Disabled is cheapest (Flash only) / 推理力度，默认即可，关闭最省（仅 Flash） | Model default |
 | Streaming / 流式输出 | Show real-time AI progress / 实时显示 AI 进度 | On |
@@ -132,8 +133,8 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程 |
 | **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体 |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 解析未解析链接 |
-| **Ask My Notes** | Ask a question; get an answer grounded only in your notes, with `[[source]]` links / 基于笔记的问答，附来源链接 |
-| **Rebuild Notes Index** | Re-embed all notes for "Ask My Notes" (run after big changes) / 重建问答索引 |
+| **Ask My Notes** | Opens a docked right-sidebar panel (also a ribbon icon). The index updates incrementally on each question — unchanged notes keep their embeddings / 打开右侧常驻面板（也有 ribbon 图标）；每次提问索引按改动增量更新 |
+| **Rebuild Notes Index** | Force a full re-embed from scratch (rarely needed) / 强制从头重建索引（一般用不到） |
 
 > *Ask My Notes* and *Semantic Related Links* are lightweight, zero-config built-ins. If you want a more powerful, fully local semantic experience, use [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) on the generated vault instead.
 >

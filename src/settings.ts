@@ -51,6 +51,22 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
+            .setName("Embedding Model")
+            .setDesc(
+                "Model for semantic features (dedup, related links, Ask My Notes). " +
+                "Use 'gemini-embedding-001' (current). Change only if Google retires it."
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder("gemini-embedding-001")
+                    .setValue(this.plugin.settings.embeddingModel)
+                    .onChange(async (value) => {
+                        this.plugin.settings.embeddingModel = value.trim();
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
             .setName("Temperature")
             .setDesc("Lower = more deterministic. 0.2-0.4 recommended.")
             .addSlider((slider) =>
