@@ -8,6 +8,12 @@ export interface LawNoteSettings {
     outputFolder: string;
     language: "zh" | "en" | "mixed";
     temperature: number;
+    /**
+     * Gemini 2.5 thinking budget (reasoning tokens).
+     * -1 = model default (untouched), 0 = disabled (cheapest, Flash only),
+     * a positive value caps reasoning tokens.
+     */
+    thinkingBudget: number;
     enableStreaming: boolean;
     enableSourceFootnotes: boolean;
     appendToExisting: boolean;
@@ -25,6 +31,7 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     outputFolder: "LawNotes/Generated",
     language: "mixed",
     temperature: 0.3,
+    thinkingBudget: -1,
     enableStreaming: true,
     enableSourceFootnotes: true,
     appendToExisting: true,

@@ -103,6 +103,7 @@ Open Settings → Law Note Restructurer:
 | Gemini API Key / API 密钥 | Your Google Gemini key / 你的 Gemini 密钥 | — |
 | Model / 模型 | `gemini-2.5-pro` (best), `flash` (recommended), `flash-lite` (cheapest) | `gemini-2.5-flash` |
 | Temperature / 温度 | Lower = more focused. 0.2–0.4 recommended / 越低越精确，建议 0.2–0.4 | 0.3 |
+| Thinking Budget / 思考预算 | Gemini 2.5 reasoning effort. Model default recommended; Disabled is cheapest (Flash only) / 推理力度，默认即可，关闭最省（仅 Flash） | Model default |
 | Streaming / 流式输出 | Show real-time AI progress / 实时显示 AI 进度 | On |
 | Output Folder / 输出文件夹 | Where to save generated files / 生成文件的保存位置 | `LawNotes/Generated` |
 | Language / 语言 | Chinese, English, or Mixed / 中文、英文或混合 | Mixed |

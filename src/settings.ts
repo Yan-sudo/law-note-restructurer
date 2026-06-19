@@ -65,6 +65,27 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
+            .setName("Thinking Budget")
+            .setDesc(
+                "Gemini 2.5 reasoning effort. 'Model default' is recommended. " +
+                "'Disabled' is cheapest/fastest (Flash only). Higher budgets improve " +
+                "hard extraction at higher cost. (思考预算：默认即可，越高越准但越贵)"
+            )
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("-1", "Model default")
+                    .addOption("0", "Disabled (cheapest, Flash only)")
+                    .addOption("4096", "Low (4K)")
+                    .addOption("8192", "Standard (8K)")
+                    .addOption("16384", "Deep (16K)")
+                    .setValue(String(this.plugin.settings.thinkingBudget))
+                    .onChange(async (value) => {
+                        this.plugin.settings.thinkingBudget = Number(value);
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
             .setName("Streaming")
             .setDesc("Stream AI responses for real-time progress display")
             .addToggle((toggle) =>

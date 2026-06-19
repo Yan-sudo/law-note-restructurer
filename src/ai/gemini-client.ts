@@ -4,14 +4,52 @@ import type { z } from "zod";
 import { normalizeExtractedEntities, normalizeRelationshipMatrix } from "./schemas";
 import type { LawNoteSettings } from "../types";
 
+const MAX_OUTPUT_TOKENS = 65536;
+
+/** Subset of the SDK's usage metadata we care about. */
+interface UsageLike {
+    totalTokenCount?: number;
+}
+
 export class GeminiClient {
     private ai: GoogleGenAI;
     private settings: LawNoteSettings;
     private abortController: AbortController | null = null;
+    private totalTokensUsed = 0;
 
     constructor(settings: LawNoteSettings) {
         this.settings = settings;
         this.ai = new GoogleGenAI({ apiKey: settings.geminiApiKey });
+    }
+
+    /** Cumulative tokens billed across every call made by this client. */
+    getTotalTokensUsed(): number {
+        return this.totalTokensUsed;
+    }
+
+    /** Build the shared generation config (temperature, output cap, JSON mode, thinking). */
+    private buildConfig(jsonMode: boolean, responseSchema?: Schema): Record<string, unknown> {
+        const config: Record<string, unknown> = {
+            temperature: this.settings.temperature,
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+        };
+        if (jsonMode) {
+            config.responseMimeType = "application/json";
+            // Constrained decoding: force the model to emit conforming JSON.
+            if (responseSchema) config.responseSchema = responseSchema;
+        }
+        // Gemini 2.5 thinking budget. -1 leaves the model default untouched;
+        // 0 disables reasoning (cheapest, Flash only); positive caps it.
+        if ((this.settings.thinkingBudget ?? -1) >= 0) {
+            config.thinkingConfig = { thinkingBudget: this.settings.thinkingBudget };
+        }
+        return config;
+    }
+
+    private recordUsage(usage: UsageLike | undefined): void {
+        if (usage?.totalTokenCount) {
+            this.totalTokensUsed += usage.totalTokenCount;
+        }
     }
 
     async generate(prompt: string): Promise<string> {
@@ -41,15 +79,7 @@ export class GeminiClient {
             let accumulated = "";
 
             try {
-                const config: Record<string, unknown> = {
-                    temperature: this.settings.temperature,
-                    maxOutputTokens: 65536,
-                };
-                if (jsonMode) {
-                    config.responseMimeType = "application/json";
-                    // Constrained decoding: force the model to emit conforming JSON.
-                    if (responseSchema) config.responseSchema = responseSchema;
-                }
+                const config = this.buildConfig(jsonMode, responseSchema);
 
                 const response = await this.ai.models.generateContentStream({
                     model: this.settings.modelName,
@@ -57,15 +87,18 @@ export class GeminiClient {
                     config,
                 });
 
+                let lastUsage: UsageLike | undefined;
                 for await (const chunk of response) {
                     if (this.abortController?.signal.aborted) {
                         throw new Error("Request aborted by user");
                     }
                     const text = chunk.text ?? "";
                     accumulated += text;
+                    if (chunk.usageMetadata) lastUsage = chunk.usageMetadata;
                     onChunk(text, accumulated);
                 }
 
+                this.recordUsage(lastUsage);
                 return accumulated;
             } catch (error: unknown) {
                 lastError = error instanceof Error ? error : new Error(String(error));
@@ -124,21 +157,15 @@ export class GeminiClient {
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                const config: Record<string, unknown> = {
-                    temperature: this.settings.temperature,
-                    maxOutputTokens: 65536,
-                };
-                if (jsonMode) {
-                    config.responseMimeType = "application/json";
-                    // Constrained decoding: force the model to emit conforming JSON.
-                    if (responseSchema) config.responseSchema = responseSchema;
-                }
+                const config = this.buildConfig(jsonMode, responseSchema);
 
                 const response = await this.ai.models.generateContent({
                     model: this.settings.modelName,
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config,
                 });
+
+                this.recordUsage(response.usageMetadata);
 
                 const text = response.text;
                 if (!text) {

@@ -88,17 +88,19 @@ export async function runStep2(
     progressModal.close();
 
     // Metadata is owned by code, not the model: record the real source files,
-    // timestamp, and model used so incremental state stays accurate.
+    // timestamp, model used, and actual token usage reported by the API.
+    const tokensUsed = client.getTotalTokensUsed();
     entities.metadata = {
         sourceDocuments: documents.map((d) => d.filename),
         extractionTimestamp: new Date().toISOString(),
         modelUsed: settings.modelName,
-        totalTokensUsed: entities.metadata?.totalTokensUsed ?? 0,
+        totalTokensUsed: tokensUsed,
     };
 
+    const tokenNote = tokensUsed > 0 ? ` (~${Math.round(tokensUsed / 1000)}K tokens)` : "";
     new Notice(
         `Extracted: ${entities.concepts.length} concepts, ${entities.cases.length} cases, ` +
-        `${entities.principles.length} principles, ${entities.rules.length} rules`
+        `${entities.principles.length} principles, ${entities.rules.length} rules${tokenNote}`
     );
 
     // User review
