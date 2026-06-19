@@ -68,6 +68,18 @@ Links are auto-classified by pattern matching (e.g. `Marbury v. Madison` → US 
 
 链接通过模式匹配自动分类（如 `Marbury v. Madison` → 美国案例，`IRC § 741` → 美国法律，`民法典` → 中国法律），获取前可人工审查。
 
+### Study Aids / 学习辅助
+
+Every run also produces a **Doctrinal Evolution** page (how each doctrine was established → modified → overruled, chronologically, with a Mermaid chart), **Case Synthesis** comparison tables, and **Flashcards** (Spaced Repetition + Anki export) — all derived from the structured data, no extra AI cost.
+
+每次运行还会生成**学说演进**页（按时间顺序展示每个学说如何确立→修正→推翻，附 Mermaid 图）、**案例综合**对比表，以及**闪卡**（兼容 Spaced Repetition 插件，并可导出 Anki）——全部从结构化数据生成，无额外 AI 开销。
+
+### Ask My Notes (RAG) / 问我的笔记
+
+Ask natural-language questions and get answers grounded **only** in your generated notes, each with `[[source links]]`. The plugin embeds your notes into a local index, retrieves the most relevant passages, and has Gemini answer from them.
+
+用自然语言提问，得到**仅**基于你笔记的回答，并附 `[[来源链接]]`。插件会把笔记嵌入到本地索引，检索最相关段落，再让 Gemini 据此作答。
+
 ---
 
 ## Getting Started / 快速开始
@@ -109,6 +121,8 @@ Open Settings → Law Note Restructurer:
 | Language / 语言 | Chinese, English, or Mixed / 中文、英文或混合 | Mixed |
 | Concurrency / 并发数 | Parallel API calls (1–10) / 并行 API 请求数（1–10） | 5 |
 | Semantic Dedup / 语义去重 | Merge same-meaning concepts via embeddings (extra cost) / 用 embedding 合并同义概念（额外开销） | Off |
+| Semantic Related Links / 语义相关链接 | Append "Related Concepts" to concept pages via embeddings / 给概念页加"语义相关"链接 | Off |
+| Generate Flashcards / 生成闪卡 | Spaced Repetition + Anki export from rules/holdings / 从规则与判决生成闪卡与 Anki 导出 | On |
 | CourtListener Token | Optional, for US case lookups / 可选，用于美国判例查询 | — |
 
 ---
@@ -124,6 +138,8 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程：选文件 → 选课程 → 提取实体 → 审查去重 → 映射关系 → 生成输出 |
 | **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体，不生成页面 |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 查找未解析链接，从法律数据库创建页面 |
+| **Ask My Notes** | Ask a question; get an answer grounded only in your generated notes, with source links / 基于你的笔记回答问题，并附来源链接 |
+| **Rebuild Notes Index** | Re-embed all notes for "Ask My Notes" (run after big changes) / 重建用于问答的笔记索引 |
 
 ---
 
@@ -155,6 +171,10 @@ LawNotes/Generated/
 │   ├── Dashboards/               ← per-concept dashboards / 仪表盘
 │   ├── Regulations/              ← regulation pages / 法规页
 │   ├── Relationship Matrix.md    ← case × concept grid / 关系矩阵
+│   ├── Doctrinal Evolution.md    ← how doctrines evolved (chrono + Mermaid) / 学说演进
+│   ├── Case Synthesis.md         ← multi-case comparison tables / 案例综合表
+│   ├── Flashcards.md             ← Spaced Repetition cards / 闪卡
+│   ├── Flashcards (Anki).txt     ← Anki import file / Anki 导入文件
 │   ├── Outline.md                ← study outline / 学习大纲
 │   └── _state.json               ← saved state for incremental updates
 ├── References/                   ← resolved link pages / 解析的链接页
