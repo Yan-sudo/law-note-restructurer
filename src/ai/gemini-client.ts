@@ -3,6 +3,7 @@ import { Notice } from "obsidian";
 import type { z } from "zod";
 import { normalizeExtractedEntities, normalizeRelationshipMatrix } from "./schemas";
 import type { LawNoteSettings } from "../types";
+import type { LLMClient } from "./llm-provider";
 
 const MAX_OUTPUT_TOKENS = 65536;
 
@@ -11,7 +12,7 @@ interface UsageLike {
     totalTokenCount?: number;
 }
 
-export class GeminiClient {
+export class GeminiClient implements LLMClient {
     private ai: GoogleGenAI;
     private settings: LawNoteSettings;
     private abortController: AbortController | null = null;

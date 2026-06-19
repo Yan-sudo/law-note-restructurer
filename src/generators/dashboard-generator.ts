@@ -1,4 +1,4 @@
-import { GeminiClient } from "../ai/gemini-client";
+import type { LLMClient } from "../ai/llm-provider";
 import { buildDashboardPrompt } from "../ai/prompts";
 import type {
     ExtractedEntities,
@@ -9,7 +9,7 @@ import type {
 import { cleanGeneratedMarkdown } from "../types";
 
 export async function generateDashboardPage(
-    client: GeminiClient,
+    client: LLMClient,
     settings: LawNoteSettings,
     concept: LegalConcept,
     entities: ExtractedEntities,

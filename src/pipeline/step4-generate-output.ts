@@ -1,5 +1,5 @@
 import { App, Notice, TFile, Vault } from "obsidian";
-import { GeminiClient } from "../ai/gemini-client";
+import { createLLMClient } from "../ai/llm-client-factory";
 import {
     generateCombinedPage,
     generateCasePageLocal,
@@ -203,7 +203,7 @@ export async function runStep4(
     outputFolderOverride?: string,
     courseName?: string
 ): Promise<string[]> {
-    const client = new GeminiClient(settings);
+    const client = createLLMClient(settings);
     const outputFolder = outputFolderOverride ?? settings.outputFolder;
     const generatedFiles: string[] = [];
     const failedPages: string[] = [];

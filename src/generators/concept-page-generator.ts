@@ -1,4 +1,4 @@
-import { GeminiClient } from "../ai/gemini-client";
+import type { LLMClient } from "../ai/llm-provider";
 import { buildConceptPagePrompt, buildCombinedConceptDashboardPrompt, buildDashboardPrompt } from "../ai/prompts";
 import type {
     ExtractedEntities,
@@ -9,7 +9,7 @@ import type {
 import { cleanGeneratedMarkdown } from "../types";
 
 export async function generateConceptPage(
-    client: GeminiClient,
+    client: LLMClient,
     settings: LawNoteSettings,
     concept: LegalConcept,
     entities: ExtractedEntities,
@@ -48,7 +48,7 @@ export async function generateConceptPage(
 const DASHBOARD_SEPARATOR = "===DASHBOARD===";
 
 export async function generateCombinedPage(
-    client: GeminiClient,
+    client: LLMClient,
     settings: LawNoteSettings,
     concept: LegalConcept,
     entities: ExtractedEntities,

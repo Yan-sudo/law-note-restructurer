@@ -1,5 +1,6 @@
 import { App, Notice } from "obsidian";
-import { GeminiClient } from "../ai/gemini-client";
+import { createLLMClient } from "../ai/llm-client-factory";
+import type { LLMClient } from "../ai/llm-provider";
 import { buildEntityExtractionPrompt } from "../ai/prompts";
 import { ExtractedEntitiesSchema } from "../ai/schemas";
 import { ExtractedEntitiesResponseSchema } from "../ai/response-schemas";
@@ -26,7 +27,7 @@ export async function runStep2(
     settings: LawNoteSettings,
     documents: SourceDocument[]
 ): Promise<ExtractedEntities | null> {
-    const client = new GeminiClient(settings);
+    const client = createLLMClient(settings);
 
     // Check if we need to chunk
     const fullSourceText = documents
@@ -120,7 +121,7 @@ export async function runStep2(
 }
 
 async function extractSingle(
-    client: GeminiClient,
+    client: LLMClient,
     settings: LawNoteSettings,
     sourceText: string,
     progressModal: ProgressModal,

@@ -1,5 +1,5 @@
 import { App, Notice } from "obsidian";
-import { GeminiClient } from "../ai/gemini-client";
+import { createLLMClient } from "../ai/llm-client-factory";
 import { buildRelationshipMappingPrompt } from "../ai/prompts";
 import { RelationshipMatrixSchema } from "../ai/schemas";
 import { RelationshipMatrixResponseSchema } from "../ai/response-schemas";
@@ -18,7 +18,7 @@ export async function runStep3(
     entities: ExtractedEntities,
     documents: SourceDocument[]
 ): Promise<RelationshipMatrix | null> {
-    const client = new GeminiClient(settings);
+    const client = createLLMClient(settings);
 
     const sourceText = documents
         .map((d) => `--- SOURCE: ${d.filename} ---\n${d.rawText}`)
