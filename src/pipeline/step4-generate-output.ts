@@ -5,6 +5,7 @@ import {
     generateCasePageLocal,
 } from "../generators/concept-page-generator";
 import { generateMatrixPage } from "../generators/matrix-generator";
+import { generateEvolutionPage, generateSynthesisPage } from "../generators/study-aids-generator";
 import { generateOutlinePage } from "../generators/outline-generator";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
@@ -360,6 +361,15 @@ export async function runStep4(
         const matrixPath = `${outputFolder}/Relationship Matrix.md`;
         await createOrOverwrite(app.vault, matrixPath, matrixContent);
         generatedFiles.push(matrixPath);
+
+        // 4b. Study aids derived from the matrix (local, always overwrite)
+        const evolutionPath = `${outputFolder}/Doctrinal Evolution.md`;
+        await createOrOverwrite(app.vault, evolutionPath, generateEvolutionPage(matrix, entities));
+        generatedFiles.push(evolutionPath);
+
+        const synthesisPath = `${outputFolder}/Case Synthesis.md`;
+        await createOrOverwrite(app.vault, synthesisPath, generateSynthesisPage(matrix, entities));
+        generatedFiles.push(synthesisPath);
 
         // 5. Wait for outline if it hasn't finished yet (usually done by now)
         progressModal.setStep(`Step 4/4: Finalizing outline...`);
