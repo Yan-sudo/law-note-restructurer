@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # package-lock.json may lag behind package.json (devDeps added without a
+      # local install), so use `npm install` rather than `npm ci`.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Lint/format are advisory for now (legacy code predates these tools):
+      # they surface issues without blocking the build. Tighten once green.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Format check
+        run: npm run format:check
+        continue-on-error: true
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
