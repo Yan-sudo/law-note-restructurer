@@ -166,15 +166,61 @@ LawNotes/Generated/
 
 ---
 
+## Privacy & Security / 隐私与安全
+
+Please read this before processing sensitive material.
+
+处理敏感材料前请先阅读本节。
+
+- **Your notes are sent to Google.** When you run extraction, relationship
+  mapping, or semantic dedup, the selected note text is sent to the Google
+  Gemini API for processing. Do **not** process privileged or confidential
+  client material (e.g. attorney–client communications, sealed records) unless
+  your engagement permits sending it to a third-party AI service.
+
+  **你的笔记会发送给 Google。** 运行实体提取、关系映射或语义去重时，所选笔记文本会发送到
+  Google Gemini API 处理。除非你的工作授权允许，请**不要**处理受特权保护或保密的客户材料
+  （如律师—客户通信、密封记录）。
+
+- **API key storage.** Your Gemini and CourtListener keys are stored locally and
+  unencrypted in the plugin's `data.json`, per the standard Obsidian plugin data
+  API. `data.json` is git-ignored by this repo, but treat your vault folder
+  accordingly and avoid syncing it to untrusted locations.
+
+  **API 密钥存储。** 你的 Gemini 与 CourtListener 密钥按 Obsidian 标准插件数据接口，以
+  **明文**保存在插件的 `data.json` 中。本仓库已将 `data.json` 加入 `.gitignore`，但请妥善
+  对待你的仓库目录，避免同步到不受信任的位置。
+
+- **Link Resolver requests.** The "Resolve Unresolved Links" command fetches from
+  public legal databases (CourtListener, Justia, Cornell LII, flk.npc.gov.cn);
+  the link text you resolve is sent to those services.
+
+  **链接解析请求。** “解析未解析链接”命令会从公开法律数据库（CourtListener、Justia、
+  Cornell LII、flk.npc.gov.cn）获取内容，你解析的链接文本会发送给这些服务。
+
+- **Reducing exposure.** Lower cost and data sent by disabling Semantic Dedup and
+  setting the Thinking Budget to *Disabled*. A fully local-model provider is on
+  the roadmap (the plugin already talks to an `LLMClient` abstraction, not Gemini
+  directly).
+
+  **降低暴露。** 关闭语义去重、并将思考预算设为*关闭*可减少开销与外发数据。完全本地模型支持已在
+  规划中（插件已通过 `LLMClient` 抽象层而非直接依赖 Gemini）。
+
+---
+
 ## Development / 开发
 
 ```bash
 npm install        # install dependencies / 安装依赖
 npm run dev        # watch mode (auto-rebuild) / 监听模式
 npm run build      # production build / 生产构建
+npm test           # run unit tests (Vitest) / 运行单元测试
+npm run typecheck  # type-check without emitting / 仅类型检查
+npm run lint       # ESLint / 代码检查
+npm run format     # Prettier / 代码格式化
 ```
 
-**Tech stack / 技术栈:** TypeScript, esbuild, [Obsidian Plugin API](https://docs.obsidian.md/), [@google/genai](https://www.npmjs.com/package/@google/genai), [zod](https://zod.dev/), [mammoth](https://www.npmjs.com/package/mammoth)
+**Tech stack / 技术栈:** TypeScript, esbuild, [Obsidian Plugin API](https://docs.obsidian.md/), [@google/genai](https://www.npmjs.com/package/@google/genai), [zod](https://zod.dev/), [mammoth](https://www.npmjs.com/package/mammoth), [Vitest](https://vitest.dev/)
 
 ---
 
