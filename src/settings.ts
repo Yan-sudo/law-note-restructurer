@@ -65,6 +65,27 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
+            .setName("Thinking Budget")
+            .setDesc(
+                "Gemini 2.5 reasoning effort. 'Model default' is recommended. " +
+                "'Disabled' is cheapest/fastest (Flash only). Higher budgets improve " +
+                "hard extraction at higher cost. (思考预算：默认即可，越高越准但越贵)"
+            )
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("-1", "Model default")
+                    .addOption("0", "Disabled (cheapest, Flash only)")
+                    .addOption("4096", "Low (4K)")
+                    .addOption("8192", "Standard (8K)")
+                    .addOption("16384", "Deep (16K)")
+                    .setValue(String(this.plugin.settings.thinkingBudget))
+                    .onChange(async (value) => {
+                        this.plugin.settings.thinkingBudget = Number(value);
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
             .setName("Streaming")
             .setDesc("Stream AI responses for real-time progress display")
             .addToggle((toggle) =>
@@ -88,6 +109,39 @@ export class LawNoteSettingTab extends PluginSettingTab {
                     .setDynamicTooltip()
                     .onChange(async (value) => {
                         this.plugin.settings.concurrency = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Semantic Deduplication")
+            .setDesc(
+                "Use embeddings to merge concepts that mean the same thing but are " +
+                "named differently (e.g. 'Aggregate Principle' vs 'Aggregate Theory of " +
+                "Partnership Taxation'). Adds a small embedding API cost. (语义去重)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableSemanticDedup)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableSemanticDedup = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Semantic Similarity Threshold")
+            .setDesc(
+                "How similar two concepts must be to auto-merge (higher = stricter). " +
+                "0.90 recommended. Only used when Semantic Deduplication is on."
+            )
+            .addSlider((slider) =>
+                slider
+                    .setLimits(0.8, 0.98, 0.01)
+                    .setValue(this.plugin.settings.semanticDedupThreshold)
+                    .setDynamicTooltip()
+                    .onChange(async (value) => {
+                        this.plugin.settings.semanticDedupThreshold = value;
                         await this.plugin.saveSettings();
                     })
             );
@@ -147,6 +201,36 @@ export class LawNoteSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.appendToExisting)
                     .onChange(async (value) => {
                         this.plugin.settings.appendToExisting = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Semantic Related Links")
+            .setDesc(
+                "Append a 'Related Concepts' section to each concept page using embeddings, " +
+                "surfacing connections beyond explicit wikilinks. Adds embedding API cost. (语义相关链接)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableSemanticLinks)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableSemanticLinks = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Generate Flashcards")
+            .setDesc(
+                "Create Flashcards.md (Spaced Repetition plugin) and an Anki .txt export " +
+                "from rules, holdings, and definitions. (生成闪卡与 Anki 导出)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableFlashcards)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableFlashcards = value;
                         await this.plugin.saveSettings();
                     })
             );

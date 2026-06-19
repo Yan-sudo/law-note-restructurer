@@ -8,10 +8,26 @@ export interface LawNoteSettings {
     outputFolder: string;
     language: "zh" | "en" | "mixed";
     temperature: number;
+    /**
+     * Gemini 2.5 thinking budget (reasoning tokens).
+     * -1 = model default (untouched), 0 = disabled (cheapest, Flash only),
+     * a positive value caps reasoning tokens.
+     */
+    thinkingBudget: number;
     enableStreaming: boolean;
     enableSourceFootnotes: boolean;
     appendToExisting: boolean;
     concurrency: number;
+    /** Use embeddings to merge semantically-duplicate concepts (extra API cost). */
+    enableSemanticDedup: boolean;
+    /** Cosine-similarity threshold (0–1) above which concepts are merged. */
+    semanticDedupThreshold: number;
+    /** Generate Flashcards.md (Spaced Repetition) + an Anki export. */
+    enableFlashcards: boolean;
+    /** Append a "Related Concepts" section to concept pages via embeddings. */
+    enableSemanticLinks: boolean;
+    /** Cosine-similarity threshold (0–1) for two concepts to be "related". */
+    semanticLinkThreshold: number;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -25,10 +41,16 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     outputFolder: "LawNotes/Generated",
     language: "mixed",
     temperature: 0.3,
+    thinkingBudget: -1,
     enableStreaming: true,
     enableSourceFootnotes: true,
     appendToExisting: true,
     concurrency: 5,
+    enableSemanticDedup: false,
+    semanticDedupThreshold: 0.9,
+    enableFlashcards: true,
+    enableSemanticLinks: false,
+    semanticLinkThreshold: 0.75,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,

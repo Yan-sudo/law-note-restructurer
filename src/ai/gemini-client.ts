@@ -1,17 +1,57 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Schema } from "@google/genai";
 import { Notice } from "obsidian";
 import type { z } from "zod";
 import { normalizeExtractedEntities, normalizeRelationshipMatrix } from "./schemas";
 import type { LawNoteSettings } from "../types";
+import type { LLMClient } from "./llm-provider";
 
-export class GeminiClient {
+const MAX_OUTPUT_TOKENS = 65536;
+const EMBEDDING_MODEL = "text-embedding-004";
+
+/** Subset of the SDK's usage metadata we care about. */
+interface UsageLike {
+    totalTokenCount?: number;
+}
+
+export class GeminiClient implements LLMClient {
     private ai: GoogleGenAI;
     private settings: LawNoteSettings;
     private abortController: AbortController | null = null;
+    private totalTokensUsed = 0;
 
     constructor(settings: LawNoteSettings) {
         this.settings = settings;
         this.ai = new GoogleGenAI({ apiKey: settings.geminiApiKey });
+    }
+
+    /** Cumulative tokens billed across every call made by this client. */
+    getTotalTokensUsed(): number {
+        return this.totalTokensUsed;
+    }
+
+    /** Build the shared generation config (temperature, output cap, JSON mode, thinking). */
+    private buildConfig(jsonMode: boolean, responseSchema?: Schema): Record<string, unknown> {
+        const config: Record<string, unknown> = {
+            temperature: this.settings.temperature,
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+        };
+        if (jsonMode) {
+            config.responseMimeType = "application/json";
+            // Constrained decoding: force the model to emit conforming JSON.
+            if (responseSchema) config.responseSchema = responseSchema;
+        }
+        // Gemini 2.5 thinking budget. -1 leaves the model default untouched;
+        // 0 disables reasoning (cheapest, Flash only); positive caps it.
+        if ((this.settings.thinkingBudget ?? -1) >= 0) {
+            config.thinkingConfig = { thinkingBudget: this.settings.thinkingBudget };
+        }
+        return config;
+    }
+
+    private recordUsage(usage: UsageLike | undefined): void {
+        if (usage?.totalTokenCount) {
+            this.totalTokensUsed += usage.totalTokenCount;
+        }
     }
 
     async generate(prompt: string): Promise<string> {
@@ -20,16 +60,18 @@ export class GeminiClient {
 
     async generateStructured<T>(
         prompt: string,
-        schema: z.ZodSchema<T>
+        schema: z.ZodSchema<T>,
+        responseSchema?: Schema
     ): Promise<T> {
-        const raw = await this.generateWithRetry(prompt, 3, true);
+        const raw = await this.generateWithRetry(prompt, 3, true, responseSchema);
         return parseAndValidate(raw, schema);
     }
 
     async generateStreaming(
         prompt: string,
         onChunk: (text: string, accumulated: string) => void,
-        jsonMode: boolean = false
+        jsonMode: boolean = false,
+        responseSchema?: Schema
     ): Promise<string> {
         const maxRetries = 3;
         let lastError: Error | null = null;
@@ -39,13 +81,7 @@ export class GeminiClient {
             let accumulated = "";
 
             try {
-                const config: Record<string, unknown> = {
-                    temperature: this.settings.temperature,
-                    maxOutputTokens: 65536,
-                };
-                if (jsonMode) {
-                    config.responseMimeType = "application/json";
-                }
+                const config = this.buildConfig(jsonMode, responseSchema);
 
                 const response = await this.ai.models.generateContentStream({
                     model: this.settings.modelName,
@@ -53,15 +89,18 @@ export class GeminiClient {
                     config,
                 });
 
+                let lastUsage: UsageLike | undefined;
                 for await (const chunk of response) {
                     if (this.abortController?.signal.aborted) {
                         throw new Error("Request aborted by user");
                     }
                     const text = chunk.text ?? "";
                     accumulated += text;
+                    if (chunk.usageMetadata) lastUsage = chunk.usageMetadata;
                     onChunk(text, accumulated);
                 }
 
+                this.recordUsage(lastUsage);
                 return accumulated;
             } catch (error: unknown) {
                 lastError = error instanceof Error ? error : new Error(String(error));
@@ -99,10 +138,20 @@ export class GeminiClient {
     async generateStructuredStreaming<T>(
         prompt: string,
         schema: z.ZodSchema<T>,
-        onChunk: (text: string, accumulated: string) => void
+        onChunk: (text: string, accumulated: string) => void,
+        responseSchema?: Schema
     ): Promise<T> {
-        const raw = await this.generateStreaming(prompt, onChunk, true);
+        const raw = await this.generateStreaming(prompt, onChunk, true, responseSchema);
         return parseAndValidate(raw, schema);
+    }
+
+    async embedTexts(texts: string[]): Promise<number[][]> {
+        if (texts.length === 0) return [];
+        const response = await this.ai.models.embedContent({
+            model: EMBEDDING_MODEL,
+            contents: texts,
+        });
+        return (response.embeddings ?? []).map((e) => e.values ?? []);
     }
 
     abort(): void {
@@ -112,25 +161,22 @@ export class GeminiClient {
     private async generateWithRetry(
         prompt: string,
         maxRetries: number,
-        jsonMode: boolean
+        jsonMode: boolean,
+        responseSchema?: Schema
     ): Promise<string> {
         let lastError: Error | null = null;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                const config: Record<string, unknown> = {
-                    temperature: this.settings.temperature,
-                    maxOutputTokens: 65536,
-                };
-                if (jsonMode) {
-                    config.responseMimeType = "application/json";
-                }
+                const config = this.buildConfig(jsonMode, responseSchema);
 
                 const response = await this.ai.models.generateContent({
                     model: this.settings.modelName,
                     contents: [{ role: "user", parts: [{ text: prompt }] }],
                     config,
                 });
+
+                this.recordUsage(response.usageMetadata);
 
                 const text = response.text;
                 if (!text) {
@@ -216,33 +262,18 @@ function tryParseAndValidate<T>(json: string, schema: z.ZodSchema<T>): T {
 function parseAndValidate<T>(raw: string, schema: z.ZodSchema<T>): T {
     const json = extractJsonFromResponse(raw);
 
-    // First attempt: parse + normalize + validate
+    // With `responseSchema` constrained decoding the model emits syntactically
+    // valid, schema-conforming JSON, so the only realistic failure mode left is
+    // truncation when the output hits `maxOutputTokens`. That is the one case we
+    // still repair (close any open brackets/strings) before re-validating.
     try {
         return tryParseAndValidate(json, schema);
     } catch (firstError) {
-        console.warn("[law-restructurer] JSON parse failed, attempting repair...", firstError);
+        console.warn("[law-restructurer] JSON parse failed, attempting truncation repair...", firstError);
     }
 
-    // Second attempt: fix unescaped quotes/control chars + bad escapes
-    const sanitized = fixBadEscapes(fixUnescapedQuotes(json));
-    try {
-        return tryParseAndValidate(sanitized, schema);
-    } catch (secondError) {
-        console.warn("[law-restructurer] Sanitized JSON failed, trying comma + truncation repair...", secondError);
-    }
-
-    // Third attempt: fix missing commas + repair truncation
-    const withCommas = fixMissingCommas(sanitized);
-    const repaired = repairTruncatedJson(withCommas);
-    try {
-        return tryParseAndValidate(repaired, schema);
-    } catch (thirdError) {
-        console.warn("[law-restructurer] Comma+truncation repair failed, trying aggressive repair...", thirdError);
-    }
-
-    // Fourth attempt: aggressive repair on comma-fixed version
-    const aggressiveRepaired = aggressiveRepairJson(withCommas);
-    return tryParseAndValidate(aggressiveRepaired, schema);
+    const repaired = repairTruncatedJson(removeTrailingCommas(json));
+    return tryParseAndValidate(repaired, schema);
 }
 
 function extractJsonFromResponse(text: string): string {
@@ -330,211 +361,6 @@ function repairTruncatedJson(json: string): string {
     }
 
     return result;
-}
-
-/**
- * More aggressive repair: find the last valid array/object closure point
- * and truncate there, then close remaining brackets.
- */
-function aggressiveRepairJson(json: string): string {
-    let result = json.trim();
-
-    // Find the last position where a complete JSON element ends
-    // (after a }, ], ", number, true, false, null)
-    let lastGoodPos = -1;
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-
-    for (let i = 0; i < result.length; i++) {
-        const ch = result[i];
-
-        if (escape) {
-            escape = false;
-            continue;
-        }
-
-        if (ch === "\\") {
-            escape = true;
-            continue;
-        }
-
-        if (ch === '"') {
-            inString = !inString;
-            if (!inString) {
-                lastGoodPos = i; // end of string
-            }
-            continue;
-        }
-
-        if (inString) continue;
-
-        if (ch === "{" || ch === "[") {
-            depth++;
-        } else if (ch === "}" || ch === "]") {
-            depth--;
-            lastGoodPos = i;
-        }
-    }
-
-    // Truncate at the last good position if we're in a broken state
-    if (inString && lastGoodPos > 0) {
-        result = result.substring(0, lastGoodPos + 1);
-    }
-
-    // Remove any trailing comma or incomplete element
-    result = result.replace(/,\s*$/, "");
-
-    // Now close remaining brackets
-    const stack: string[] = [];
-    inString = false;
-    escape = false;
-
-    for (let i = 0; i < result.length; i++) {
-        const ch = result[i];
-        if (escape) { escape = false; continue; }
-        if (ch === "\\") { escape = true; continue; }
-        if (ch === '"') { inString = !inString; continue; }
-        if (inString) continue;
-        if (ch === "{") stack.push("}");
-        else if (ch === "[") stack.push("]");
-        else if (ch === "}" || ch === "]") {
-            if (stack.length > 0 && stack[stack.length - 1] === ch) {
-                stack.pop();
-            }
-        }
-    }
-
-    while (stack.length > 0) {
-        result += stack.pop();
-    }
-
-    return result;
-}
-
-/**
- * Fix unescaped quotes and control characters inside JSON string values.
- * Gemini sometimes produces: "facts": "The court said "hello" to..."
- * which breaks JSON.parse because the internal quotes aren't escaped.
- */
-function fixUnescapedQuotes(json: string): string {
-    const result: string[] = [];
-    let i = 0;
-    let inString = false;
-    let escaped = false;
-
-    while (i < json.length) {
-        const ch = json[i];
-
-        if (escaped) {
-            result.push(ch);
-            escaped = false;
-            i++;
-            continue;
-        }
-
-        if (ch === "\\") {
-            result.push(ch);
-            escaped = true;
-            i++;
-            continue;
-        }
-
-        if (ch === '"') {
-            if (!inString) {
-                inString = true;
-                result.push(ch);
-            } else {
-                // Is this a closing quote or an unescaped internal quote?
-                // Look at what follows (skip whitespace)
-                const rest = json.slice(i + 1);
-                const nextMatch = rest.match(/^\s*([,\]}\n:]|$)/);
-                if (nextMatch) {
-                    // Followed by structural char → closing quote
-                    inString = false;
-                    result.push(ch);
-                } else {
-                    // Internal unescaped quote → escape it
-                    result.push('\\"');
-                }
-            }
-        } else if (inString && (ch === "\n" || ch === "\r" || ch === "\t")) {
-            // Escape literal control characters inside strings
-            if (ch === "\n") result.push("\\n");
-            else if (ch === "\r") result.push("\\r");
-            else if (ch === "\t") result.push("\\t");
-        } else {
-            result.push(ch);
-        }
-        i++;
-    }
-    return result.join("");
-}
-
-/**
- * Fix missing commas between JSON elements.
- * AI sometimes outputs adjacent objects/values without separating commas:
- *   { "key": "val" }\n  { "key2": "val2" }   →  missing comma
- *   "value"\n  "nextKey":                      →  missing comma
- */
-function fixMissingCommas(json: string): string {
-    let result = json;
-
-    // } followed by { without comma (objects in array)
-    result = result.replace(/\}(\s*\n\s*)\{/g, "},$1{");
-
-    // ] followed by [ without comma (adjacent arrays)
-    result = result.replace(/\](\s*\n\s*)\[/g, "],$1[");
-
-    // ] followed by { without comma
-    result = result.replace(/\](\s*\n\s*)\{/g, "],$1{");
-
-    // } followed by " where " starts a new key (has : after the string)
-    result = result.replace(/\}(\s*\n\s*)"(?=(?:[^"\\]|\\.)*"\s*:)/g, '},$1"');
-
-    // "value" followed by "key": (string value then next key-value without comma)
-    result = result.replace(/"(\s*\n\s*)"(?=(?:[^"\\]|\\.)*"\s*:)/g, '",$1"');
-
-    // number/true/false/null followed by "key":
-    result = result.replace(/((?:true|false|null|\d)\s*\n\s*)"(?=(?:[^"\\]|\\.)*"\s*:)/g, '$1,$2"');
-
-    return result;
-}
-
-/**
- * Fix invalid escape sequences inside JSON strings.
- * AI sometimes outputs \s, \1, \p etc. which are not valid JSON escapes.
- * Valid JSON escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
- */
-function fixBadEscapes(json: string): string {
-    const validEscapes = new Set(['"', "\\", "/", "b", "f", "n", "r", "t", "u"]);
-    const result: string[] = [];
-    let inString = false;
-
-    for (let i = 0; i < json.length; i++) {
-        const ch = json[i];
-
-        if (ch === '"' && (i === 0 || json[i - 1] !== "\\")) {
-            inString = !inString;
-            result.push(ch);
-            continue;
-        }
-
-        if (inString && ch === "\\" && i + 1 < json.length) {
-            const next = json[i + 1];
-            if (validEscapes.has(next)) {
-                // Valid escape — keep as-is
-                result.push(ch);
-            } else {
-                // Invalid escape like \s, \1, \p — double the backslash
-                result.push("\\\\");
-            }
-        } else {
-            result.push(ch);
-        }
-    }
-
-    return result.join("");
 }
 
 function removeTrailingCommas(json: string): string {

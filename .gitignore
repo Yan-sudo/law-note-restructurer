@@ -1,4 +1,17 @@
 node_modules/
+
+# Build output (built locally / in CI, not committed)
 main.js
+main *.js
 *.js.map
+
+# Obsidian plugin runtime data (contains the API key)
 data.json
+
+# OS / editor / sync junk
+.DS_Store
+*.ffs_lock
+
+# Test / coverage output
+coverage/
+.vitest/

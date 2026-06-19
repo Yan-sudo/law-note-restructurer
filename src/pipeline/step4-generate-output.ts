@@ -1,10 +1,13 @@
 import { App, Notice, TFile, Vault } from "obsidian";
-import { GeminiClient } from "../ai/gemini-client";
+import { createLLMClient } from "../ai/llm-client-factory";
 import {
     generateCombinedPage,
     generateCasePageLocal,
 } from "../generators/concept-page-generator";
 import { generateMatrixPage } from "../generators/matrix-generator";
+import { generateEvolutionPage, generateSynthesisPage } from "../generators/study-aids-generator";
+import { generateFlashcardsMarkdown, generateAnkiExport } from "../generators/flashcards-generator";
+import { computeRelatedConcepts, renderRelatedSection, type RelatedConcept } from "./semantic-links";
 import { generateOutlinePage } from "../generators/outline-generator";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
@@ -203,7 +206,7 @@ export async function runStep4(
     outputFolderOverride?: string,
     courseName?: string
 ): Promise<string[]> {
-    const client = new GeminiClient(settings);
+    const client = createLLMClient(settings);
     const outputFolder = outputFolderOverride ?? settings.outputFolder;
     const generatedFiles: string[] = [];
     const failedPages: string[] = [];
@@ -255,6 +258,21 @@ export async function runStep4(
                 completedSteps++;
             });
 
+        // 1b. Precompute semantic "related concepts" (one embedding batch), if enabled.
+        let relatedMap = new Map<string, RelatedConcept[]>();
+        if (settings.enableSemanticLinks) {
+            try {
+                relatedMap = await computeRelatedConcepts(
+                    entities.concepts,
+                    client,
+                    settings.semanticLinkThreshold,
+                    5
+                );
+            } catch (error) {
+                console.warn("[law-restructurer] Semantic links failed; skipping.", error);
+            }
+        }
+
         // 2. Generate concept + dashboard pages in parallel (AI-powered, combined prompt)
         progressModal.setStep(
             `Step 4/4: Generating concept & dashboard pages (0/${entities.concepts.length})...`
@@ -272,12 +290,16 @@ export async function runStep4(
                     sourceFiles
                 );
 
+                // Append semantic "related concepts" links (deterministic, no hallucination).
+                const conceptPageContent =
+                    conceptPage + renderRelatedSection(relatedMap.get(concept.id));
+
                 // Write concept page (search sibling courses for existing page)
                 const conceptPath = `${outputFolder}/Concepts/${sanitizeFilename(concept.name)}.md`;
                 await createOrUpdateOrAppend(
                     app.vault,
                     conceptPath,
-                    conceptPage,
+                    conceptPageContent,
                     settings.appendToExisting,
                     concept.name,
                     outputFolder,
@@ -286,7 +308,7 @@ export async function runStep4(
                     courseName
                 );
                 generatedFiles.push(conceptPath);
-                allGeneratedContent.push(conceptPage);
+                allGeneratedContent.push(conceptPageContent);
 
                 // Write dashboard page (search sibling courses for existing page)
                 const dashPath = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;
@@ -360,6 +382,26 @@ export async function runStep4(
         const matrixPath = `${outputFolder}/Relationship Matrix.md`;
         await createOrOverwrite(app.vault, matrixPath, matrixContent);
         generatedFiles.push(matrixPath);
+
+        // 4b. Study aids derived from the matrix (local, always overwrite)
+        const evolutionPath = `${outputFolder}/Doctrinal Evolution.md`;
+        await createOrOverwrite(app.vault, evolutionPath, generateEvolutionPage(matrix, entities));
+        generatedFiles.push(evolutionPath);
+
+        const synthesisPath = `${outputFolder}/Case Synthesis.md`;
+        await createOrOverwrite(app.vault, synthesisPath, generateSynthesisPage(matrix, entities));
+        generatedFiles.push(synthesisPath);
+
+        // 4c. Flashcards (Spaced Repetition + Anki), local, opt-out via settings
+        if (settings.enableFlashcards) {
+            const flashPath = `${outputFolder}/Flashcards.md`;
+            await createOrOverwrite(app.vault, flashPath, generateFlashcardsMarkdown(entities));
+            generatedFiles.push(flashPath);
+
+            const ankiPath = `${outputFolder}/Flashcards (Anki).txt`;
+            await createOrOverwrite(app.vault, ankiPath, generateAnkiExport(entities));
+            generatedFiles.push(ankiPath);
+        }
 
         // 5. Wait for outline if it hasn't finished yet (usually done by now)
         progressModal.setStep(`Step 4/4: Finalizing outline...`);
