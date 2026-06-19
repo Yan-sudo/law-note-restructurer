@@ -24,6 +24,10 @@ export interface LawNoteSettings {
     semanticDedupThreshold: number;
     /** Generate Flashcards.md (Spaced Repetition) + an Anki export. */
     enableFlashcards: boolean;
+    /** Append a "Related Concepts" section to concept pages via embeddings. */
+    enableSemanticLinks: boolean;
+    /** Cosine-similarity threshold (0–1) for two concepts to be "related". */
+    semanticLinkThreshold: number;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -45,6 +49,8 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     enableSemanticDedup: false,
     semanticDedupThreshold: 0.9,
     enableFlashcards: true,
+    enableSemanticLinks: false,
+    semanticLinkThreshold: 0.75,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,

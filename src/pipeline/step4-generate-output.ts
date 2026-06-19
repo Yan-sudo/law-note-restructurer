@@ -7,6 +7,7 @@ import {
 import { generateMatrixPage } from "../generators/matrix-generator";
 import { generateEvolutionPage, generateSynthesisPage } from "../generators/study-aids-generator";
 import { generateFlashcardsMarkdown, generateAnkiExport } from "../generators/flashcards-generator";
+import { computeRelatedConcepts, renderRelatedSection, type RelatedConcept } from "./semantic-links";
 import { generateOutlinePage } from "../generators/outline-generator";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
@@ -257,6 +258,21 @@ export async function runStep4(
                 completedSteps++;
             });
 
+        // 1b. Precompute semantic "related concepts" (one embedding batch), if enabled.
+        let relatedMap = new Map<string, RelatedConcept[]>();
+        if (settings.enableSemanticLinks) {
+            try {
+                relatedMap = await computeRelatedConcepts(
+                    entities.concepts,
+                    client,
+                    settings.semanticLinkThreshold,
+                    5
+                );
+            } catch (error) {
+                console.warn("[law-restructurer] Semantic links failed; skipping.", error);
+            }
+        }
+
         // 2. Generate concept + dashboard pages in parallel (AI-powered, combined prompt)
         progressModal.setStep(
             `Step 4/4: Generating concept & dashboard pages (0/${entities.concepts.length})...`
@@ -274,12 +290,16 @@ export async function runStep4(
                     sourceFiles
                 );
 
+                // Append semantic "related concepts" links (deterministic, no hallucination).
+                const conceptPageContent =
+                    conceptPage + renderRelatedSection(relatedMap.get(concept.id));
+
                 // Write concept page (search sibling courses for existing page)
                 const conceptPath = `${outputFolder}/Concepts/${sanitizeFilename(concept.name)}.md`;
                 await createOrUpdateOrAppend(
                     app.vault,
                     conceptPath,
-                    conceptPage,
+                    conceptPageContent,
                     settings.appendToExisting,
                     concept.name,
                     outputFolder,
@@ -288,7 +308,7 @@ export async function runStep4(
                     courseName
                 );
                 generatedFiles.push(conceptPath);
-                allGeneratedContent.push(conceptPage);
+                allGeneratedContent.push(conceptPageContent);
 
                 // Write dashboard page (search sibling courses for existing page)
                 const dashPath = `${outputFolder}/Dashboards/${sanitizeFilename(concept.name)} Dashboard.md`;

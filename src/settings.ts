@@ -206,6 +206,21 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
+            .setName("Semantic Related Links")
+            .setDesc(
+                "Append a 'Related Concepts' section to each concept page using embeddings, " +
+                "surfacing connections beyond explicit wikilinks. Adds embedding API cost. (语义相关链接)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableSemanticLinks)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableSemanticLinks = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
             .setName("Generate Flashcards")
             .setDesc(
                 "Create Flashcards.md (Spaced Repetition plugin) and an Anki .txt export " +
