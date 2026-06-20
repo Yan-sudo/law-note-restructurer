@@ -126,9 +126,9 @@ Open Settings → Law Note Restructurer:
 
 ## Commands / 命令
 
-Open the command palette (`Ctrl/Cmd + P`) and search:
+**No need to memorize commands** — click the **⚖️ Law Notes** ribbon icon (left edge) to open a control panel with a labeled button for every action. Or open the command palette (`Ctrl/Cmd + P`):
 
-打开命令面板（`Ctrl/Cmd + P`）搜索：
+**不用记命令** —— 点左侧 **⚖️ Law Notes** 功能区图标，打开图形控制台，每个功能一个按钮。也可用命令面板（`Ctrl/Cmd + P`）：
 
 | Command / 命令 | What it does / 作用 |
 |---|---|

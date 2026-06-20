@@ -688,3 +688,69 @@
         transform: translateY(-3px);
     }
 }
+
+/* ============================================
+   Law Notes — control panel (Home view)
+   ============================================ */
+.lnr-home {
+    padding: var(--size-4-3);
+}
+
+.lnr-home-title {
+    font-size: var(--font-ui-large);
+    font-weight: var(--font-bold);
+}
+
+.lnr-home-subtitle {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    margin-bottom: var(--size-4-3);
+}
+
+.lnr-home-section {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    margin: var(--size-4-3) 0 var(--size-2-2);
+}
+
+.lnr-home-action {
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) var(--size-4-3);
+    margin-bottom: var(--size-2-3);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+    cursor: pointer;
+    transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.lnr-home-action:hover {
+    background: var(--background-modifier-hover);
+    border-color: var(--interactive-accent);
+}
+
+.lnr-home-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--interactive-accent);
+    flex: 0 0 auto;
+}
+
+.lnr-home-action-body {
+    min-width: 0;
+}
+
+.lnr-home-action-label {
+    font-weight: var(--font-medium);
+    color: var(--text-normal);
+}
+
+.lnr-home-action-desc {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
