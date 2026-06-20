@@ -118,7 +118,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
      * of contents → user drags/edits it → AI writes the full outline in that order.
      */
     async buildOutline(): Promise<void> {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
@@ -242,8 +242,12 @@ export default class LawNoteRestructurerPlugin extends Plugin {
      * (unchanged files keep their embeddings), scoped to the chosen folder, and
      * the answer is appended to the conversation history.
      */
-    async askQuestion(question: string, mode: AskMode = "qa"): Promise<ChatTurn> {
-        if (!this.settings.geminiApiKey) {
+    async askQuestion(
+        question: string,
+        mode: AskMode = "qa",
+        onChunk?: (text: string, accumulated: string) => void
+    ): Promise<ChatTurn> {
+        if (this.missingGeminiKey()) {
             throw new Error("Set your Gemini API key in Settings first.");
         }
         const client = createLLMClient(this.settings);
@@ -270,7 +274,9 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             this.ragIndex,
             question,
             this.chatHistory,
-            mode
+            mode,
+            6,
+            onChunk
         );
         const turn: ChatTurn = { question, answer, sources };
         this.chatHistory.push(turn);
@@ -311,21 +317,33 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         }
     }
 
+    /**
+     * True when a Gemini key is required but missing. The key is only needed for
+     * providers that actually call Gemini — a fully-local setup (Ollama for both
+     * generation and embeddings) needs no key at all.
+     */
+    private missingGeminiKey(): boolean {
+        const usesGemini =
+            this.settings.generationProvider === "gemini" ||
+            this.settings.embeddingProvider === "gemini";
+        return usesGemini && !this.settings.geminiApiKey;
+    }
+
     private startPipeline(stopAfter?: string): void {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
-        this.pipeline = new PipelineOrchestrator(this.app, this.settings);
+        this.pipeline = new PipelineOrchestrator(this.app, this.settings, () => this.saveSettings());
         this.pipeline.start(stopAfter);
     }
 
     private startIncrementalUpdate(): void {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
-        this.pipeline = new PipelineOrchestrator(this.app, this.settings);
+        this.pipeline = new PipelineOrchestrator(this.app, this.settings, () => this.saveSettings());
         this.pipeline.startIncremental();
     }
 

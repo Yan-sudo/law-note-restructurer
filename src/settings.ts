@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type LawNoteRestructurerPlugin from "./main";
 import { createEmbedder } from "./ai/embedder";
+import { estimateCostUSD, formatTokens, formatUSD, isLocalGeneration } from "./ai/cost";
 
 export class LawNoteSettingTab extends PluginSettingTab {
     plugin: LawNoteRestructurerPlugin;
@@ -31,19 +32,72 @@ export class LawNoteSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("Model")
-            .setDesc("Gemini model to use. 2.5 Pro recommended for large documents.")
+            .setName("Generation provider")
+            .setDesc(
+                "Where note generation runs. Ollama is local: offline, free, no quota, " +
+                "no API key — notes never leave your machine (quality depends on the local model)."
+            )
             .addDropdown((dropdown) =>
                 dropdown
-                    .addOption("gemini-2.5-pro", "Gemini 2.5 Pro (best quality)")
-                    .addOption("gemini-2.5-flash", "Gemini 2.5 Flash (fast, recommended)")
-                    .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite (cheapest)")
-                    .setValue(this.plugin.settings.modelName)
+                    .addOption("gemini", "Gemini (cloud)")
+                    .addOption("ollama", "Ollama (local)")
+                    .setValue(this.plugin.settings.generationProvider)
                     .onChange(async (value) => {
-                        this.plugin.settings.modelName = value;
+                        this.plugin.settings.generationProvider = value as "gemini" | "ollama";
                         await this.plugin.saveSettings();
+                        this.display(); // refresh to show the relevant model field
                     })
             );
+
+        if (this.plugin.settings.generationProvider === "gemini") {
+            new Setting(containerEl)
+                .setName("Model")
+                .setDesc("Gemini model to use. 2.5 Pro recommended for large documents.")
+                .addDropdown((dropdown) =>
+                    dropdown
+                        .addOption("gemini-2.5-pro", "Gemini 2.5 Pro (best quality)")
+                        .addOption("gemini-2.5-flash", "Gemini 2.5 Flash (fast, recommended)")
+                        .addOption("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite (cheapest)")
+                        .setValue(this.plugin.settings.modelName)
+                        .onChange(async (value) => {
+                            this.plugin.settings.modelName = value;
+                            await this.plugin.saveSettings();
+                        })
+                );
+        } else {
+            new Setting(containerEl)
+                .setName("Ollama generation model")
+                .setDesc(
+                    "Pull it first, e.g. `ollama pull llama3.1`. Larger models (e.g. " +
+                    "qwen2.5:14b) give better notes."
+                )
+                .addText((text) =>
+                    text
+                        .setPlaceholder("llama3.1")
+                        .setValue(this.plugin.settings.ollamaModel)
+                        .onChange(async (value) => {
+                            this.plugin.settings.ollamaModel = value.trim();
+                            await this.plugin.saveSettings();
+                        })
+                );
+
+            // The Ollama URL is shared with embeddings; show it here only when the
+            // embedding section (below) won't already render it.
+            if (this.plugin.settings.embeddingProvider !== "ollama") {
+                new Setting(containerEl)
+                    .setName("Ollama URL")
+                    .setDesc("Address of your local Ollama server.")
+                    .addText((text) =>
+                        text
+                            .setPlaceholder("http://localhost:11434")
+                            .setValue(this.plugin.settings.ollamaUrl)
+                            .onChange(async (value) => {
+                                this.plugin.settings.ollamaUrl = value.trim();
+                                await this.plugin.saveSettings();
+                            })
+                    );
+            }
+        }
 
         new Setting(containerEl)
             .setName("Embedding provider")
@@ -186,6 +240,39 @@ export class LawNoteSettingTab extends PluginSettingTab {
                         this.plugin.settings.concurrency = value;
                         await this.plugin.saveSettings();
                     })
+            );
+
+        new Setting(containerEl)
+            .setName("Auto-accept review")
+            .setDesc(
+                "Skip the entity & relationship review modals and generate immediately. " +
+                "Faster and fully unattended — turn off if you like to edit before generating. (自动确认，跳过审阅)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.autoAcceptReview)
+                    .onChange(async (value) => {
+                        this.plugin.settings.autoAcceptReview = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        // Cost meter: cumulative tokens billed across every run.
+        const lifetime = this.plugin.settings.lifetimeTokensUsed ?? 0;
+        const costDesc = isLocalGeneration(this.plugin.settings)
+            ? `${formatTokens(lifetime)} tokens so far (current provider is local — free).`
+            : `${formatTokens(lifetime)} tokens so far · ~${formatUSD(
+                  estimateCostUSD(this.plugin.settings.modelName, lifetime)
+              )} (rough estimate).`;
+        new Setting(containerEl)
+            .setName("Usage so far (cost meter)")
+            .setDesc(costDesc)
+            .addButton((btn) =>
+                btn.setButtonText("Reset").onClick(async () => {
+                    this.plugin.settings.lifetimeTokensUsed = 0;
+                    await this.plugin.saveSettings();
+                    this.display();
+                })
             );
 
         new Setting(containerEl)

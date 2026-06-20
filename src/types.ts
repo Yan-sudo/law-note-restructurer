@@ -5,6 +5,10 @@
 export interface LawNoteSettings {
     geminiApiKey: string;
     modelName: string;
+    /** Where text generation runs: Gemini cloud, or a local Ollama server. */
+    generationProvider: "gemini" | "ollama";
+    /** Ollama generation model (used when generationProvider = "ollama"). */
+    ollamaModel: string;
     /** Where embeddings run: Gemini cloud, or a local Ollama server (offline, no quota). */
     embeddingProvider: "gemini" | "ollama";
     /** Gemini embedding model (used when embeddingProvider = "gemini"). */
@@ -38,6 +42,10 @@ export interface LawNoteSettings {
     enableSemanticLinks: boolean;
     /** Cosine-similarity threshold (0–1) for two concepts to be "related". */
     semanticLinkThreshold: number;
+    /** Skip the entity review modal and generate immediately (unattended runs). */
+    autoAcceptReview: boolean;
+    /** Cumulative API tokens billed across every run (cost meter). */
+    lifetimeTokensUsed: number;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -48,6 +56,8 @@ export interface LawNoteSettings {
 export const DEFAULT_SETTINGS: LawNoteSettings = {
     geminiApiKey: "",
     modelName: "gemini-2.5-flash",
+    generationProvider: "gemini",
+    ollamaModel: "llama3.1",
     embeddingProvider: "gemini",
     embeddingModel: "gemini-embedding-001",
     ollamaUrl: "http://localhost:11434",
@@ -66,6 +76,8 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     enableFlashcards: true,
     enableSemanticLinks: false,
     semanticLinkThreshold: 0.75,
+    autoAcceptReview: false,
+    lifetimeTokensUsed: 0,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,

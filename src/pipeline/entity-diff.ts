@@ -1,4 +1,4 @@
-import type { ExtractedEntities } from "../types";
+import type { ExtractedEntities, RelationshipMatrix } from "../types";
 import { normalizeConceptName } from "../types";
 
 /** What changed between a previous knowledge base and the freshly-merged one. */
@@ -20,6 +20,36 @@ export function diffIsEmpty(d: EntityDiff): boolean {
         d.addedCases.length === 0 &&
         d.updatedCases.length === 0
     );
+}
+
+/**
+ * Concept names whose generated page must be re-created for this run: the
+ * concepts that changed, plus any concept linked (in the matrix) to a case that
+ * changed. On a first full run the diff lists every concept, so this returns
+ * all of them — letting step 4 always filter by this set safely.
+ */
+export function affectedConceptNames(
+    diff: EntityDiff,
+    entities: ExtractedEntities,
+    matrix: RelationshipMatrix
+): Set<string> {
+    const names = new Set<string>([...diff.addedConcepts, ...diff.updatedConcepts]);
+
+    const changedCaseNames = new Set([...diff.addedCases, ...diff.updatedCases]);
+    if (changedCaseNames.size > 0) {
+        const caseIdByName = new Map(entities.cases.map((c) => [c.name, c.id]));
+        const conceptNameById = new Map(entities.concepts.map((c) => [c.id, c.name]));
+        const changedCaseIds = new Set(
+            [...changedCaseNames].map((n) => caseIdByName.get(n)).filter((id): id is string => !!id)
+        );
+        for (const e of matrix.entries) {
+            if (changedCaseIds.has(e.caseId)) {
+                const cn = conceptNameById.get(e.conceptId);
+                if (cn) names.add(cn);
+            }
+        }
+    }
+    return names;
 }
 
 type EntityLists = Pick<ExtractedEntities, "concepts" | "cases">;

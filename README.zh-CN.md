@@ -90,8 +90,9 @@ npm install && npm run build
 
 | 设置项 | 说明 | 默认值 |
 |---|---|---|
-| Gemini API 密钥 | 你的 Google Gemini 密钥 | — |
-| 模型 | `gemini-2.5-pro`（最佳）、`flash`（推荐）、`flash-lite`（最省） | `gemini-2.5-flash` |
+| Gemini API 密钥 | 你的 Google Gemini 密钥（完全本地时无需填写） | — |
+| 生成来源 | `Gemini` 云端，或 **`Ollama` 本地（离线、免费、无需密钥）** | `Gemini` |
+| 模型 | Gemini 模型，或要拉取的 Ollama 模型 | `gemini-2.5-flash` · `llama3.1` |
 | 嵌入来源 | `Gemini` 云端，或 **`Ollama` 本地（离线、免费、不限额、隐私）** | `Gemini` |
 | 嵌入模型 | Gemini 模型，或要拉取的 Ollama 模型 | `gemini-embedding-001` · `nomic-embed-text` |
 | 温度 | 越低越精确，建议 0.2–0.4 | 0.3 |
@@ -100,6 +101,8 @@ npm install && npm run build
 | 输出文件夹 | 生成文件的保存位置 | `LawNotes/Generated` |
 | 语言 | 中文、英文或混合 | 混合 |
 | 并发数 | 并行 API 请求数（1–10） | 5 |
+| 自动确认审阅 | 跳过实体/关系审阅弹窗，直接生成（无人值守） | 关 |
+| 累计用量 | 费用计 — 累计 token 与粗略美元估算，可重置 | — |
 | 语义去重 | 用 embedding 合并同义概念（额外开销） | 关 |
 | 语义相关链接 | 给概念页加"语义相关"链接 | 关 |
 | 生成闪卡 | 从规则与判决生成闪卡与 Anki 导出 | 开 |
@@ -122,7 +125,15 @@ launchctl setenv OLLAMA_ORIGINS "*"
 # Linux / Windows：启动 Ollama 前设置环境变量 OLLAMA_ORIGINS=*（或 app://obsidian.md）
 ```
 
-> 只有**嵌入**走本地;Ask My Notes 的*回答生成*仍用 Gemini(完全本地的生成模型已在规划中)。
+### 完全本地、无需密钥（Ollama 生成）
+
+你可以把**所有步骤**都放到本机跑——抽取、重构、大纲、Ask My Notes 回答——无需 Gemini 密钥、不限额：
+
+1. 安装 [Ollama](https://ollama.com) 并拉取一个够强的模型：`ollama pull llama3.1`（或更强的 `qwen2.5:14b`）。
+2. 在 **设置 → 生成来源** 选 **Ollama (local)**，并填写模型名。
+3. 把 **嵌入来源** 也设为 **Ollama**（见上文），这样没有任何一步会联网。
+
+> 本地生成的质量取决于你拉取的模型——模型越大笔记越好但越慢。若追求大文档的最佳质量，建议生成仍用 Gemini，仅把**嵌入**放到本地。
 
 ---
 
@@ -212,8 +223,8 @@ LawNotes/Generated/
 - **你的笔记会发送给 Google。** 实体提取、关系映射、语义去重/相关链接、问答都会把所选文本发送到 Gemini API。除非你的工作授权允许，请**不要**处理受特权保护或保密的客户材料。
 - **API 密钥存储。** 你的 Gemini 与 CourtListener 密钥以**明文**保存在插件 `data.json`（Obsidian 标准做法）。本仓库已 git-ignore，但请避免把仓库同步到不受信任的位置。
 - **链接解析与外部请求。** “解析未解析链接”会把链接文本发送给 CourtListener、Justia、Cornell LII、flk.npc.gov.cn。
-- **本地嵌入（敏感材料推荐）。** 把 **Embedding Provider 设为 Ollama**，即可让所有嵌入（语义去重、相关链接、Ask My Notes 检索）在本地 [Ollama](https://ollama.com) 服务上运行——离线、免费、不限额、数据不出本机。装好 Ollama，运行 `ollama pull nomic-embed-text`，在设置里选它即可。（Ask My Notes 的*回答生成*仍走 Gemini；完全本地的生成模型已在规划中，插件已通过 `LLMClient` 抽象层。）
-- **降低暴露。** 用本地嵌入（见上）、关闭语义去重/相关链接、思考预算设为*关闭*、优先用 Flash 模型。
+- **完全本地、零云端（敏感材料推荐）。** 把 **生成来源** 和 **嵌入来源** 都设为 **Ollama**，即可让实体提取、重构、大纲、嵌入、Ask My Notes 回答全部在本地 [Ollama](https://ollama.com) 服务上运行——离线、免费、无需密钥、不限额、数据不出本机。装好 Ollama，运行 `ollama pull llama3.1` 与 `ollama pull nomic-embed-text`，在设置里选它即可。
+- **降低暴露。** 走完全本地（见上），或生成仍用 Gemini 而仅把 **嵌入来源设为 Ollama**;关闭语义去重/相关链接、思考预算设为*关闭*、优先用 Flash 模型。
 
 ---
 

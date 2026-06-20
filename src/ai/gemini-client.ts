@@ -1,7 +1,7 @@
 import { GoogleGenAI, type Schema } from "@google/genai";
 import { Notice } from "obsidian";
 import type { z } from "zod";
-import { normalizeExtractedEntities, normalizeRelationshipMatrix } from "./schemas";
+import { parseAndValidate } from "./json-parse";
 import type { LawNoteSettings } from "../types";
 import type { LLMClient } from "./llm-provider";
 
@@ -278,132 +278,6 @@ export class GeminiClient implements LLMClient {
 
         throw lastError ?? new Error("Unknown error");
     }
-}
-
-function normalizeData(data: Record<string, unknown>): void {
-    // Detect type by shape and normalize accordingly
-    if ("concepts" in data || "cases" in data || "principles" in data || "rules" in data) {
-        normalizeExtractedEntities(data);
-    }
-    // Detect relationship matrix (entries alone is enough — casesInOrder may be missing from truncation)
-    if ("entries" in data && Array.isArray(data.entries)) {
-        normalizeRelationshipMatrix(data);
-    }
-}
-
-function tryParseAndValidate<T>(json: string, schema: z.ZodSchema<T>): T {
-    const parsed = JSON.parse(json);
-    normalizeData(parsed);
-    return schema.parse(parsed);
-}
-
-function parseAndValidate<T>(raw: string, schema: z.ZodSchema<T>): T {
-    const json = extractJsonFromResponse(raw);
-
-    // With `responseSchema` constrained decoding the model emits syntactically
-    // valid, schema-conforming JSON, so the only realistic failure mode left is
-    // truncation when the output hits `maxOutputTokens`. That is the one case we
-    // still repair (close any open brackets/strings) before re-validating.
-    try {
-        return tryParseAndValidate(json, schema);
-    } catch (firstError) {
-        console.warn("[law-restructurer] JSON parse failed, attempting truncation repair...", firstError);
-    }
-
-    const repaired = repairTruncatedJson(removeTrailingCommas(json));
-    return tryParseAndValidate(repaired, schema);
-}
-
-function extractJsonFromResponse(text: string): string {
-    // Try markdown code fence
-    const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    if (fenceMatch) {
-        return fenceMatch[1].trim();
-    }
-
-    // Try raw JSON boundaries
-    const firstBrace = text.indexOf("{");
-    const lastBrace = text.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-        return text.substring(firstBrace, lastBrace + 1);
-    }
-
-    // If we only found an opening brace (truncated), take everything from it
-    if (firstBrace !== -1) {
-        return text.substring(firstBrace);
-    }
-
-    return text.trim();
-}
-
-/**
- * Repair truncated JSON by:
- * 1. Removing trailing comma before adding closers
- * 2. Closing all unclosed brackets/braces
- * 3. Closing unclosed strings
- */
-function repairTruncatedJson(json: string): string {
-    let result = json.trim();
-
-    // If it ends with a complete }, it might just have trailing commas
-    result = removeTrailingCommas(result);
-
-    // Check if brackets are balanced
-    const stack: string[] = [];
-    let inString = false;
-    let escape = false;
-
-    for (let i = 0; i < result.length; i++) {
-        const ch = result[i];
-
-        if (escape) {
-            escape = false;
-            continue;
-        }
-
-        if (ch === "\\") {
-            escape = true;
-            continue;
-        }
-
-        if (ch === '"') {
-            inString = !inString;
-            continue;
-        }
-
-        if (inString) continue;
-
-        if (ch === "{") stack.push("}");
-        else if (ch === "[") stack.push("]");
-        else if (ch === "}" || ch === "]") {
-            if (stack.length > 0 && stack[stack.length - 1] === ch) {
-                stack.pop();
-            }
-        }
-    }
-
-    // If we're inside an unclosed string, close it
-    if (inString) {
-        result += '"';
-    }
-
-    // Remove any trailing incomplete key-value pair
-    // e.g., `"key": "some truncated val` -> already closed string above
-    // e.g., `"key": ` -> remove dangling key
-    result = result.replace(/,\s*"[^"]*":\s*$/, "");
-    result = result.replace(/,\s*$/, "");
-
-    // Close all unclosed brackets/braces in reverse order
-    while (stack.length > 0) {
-        result += stack.pop();
-    }
-
-    return result;
-}
-
-function removeTrailingCommas(json: string): string {
-    // Remove trailing commas before } or ]
-    return json.replace(/,\s*([\]}])/g, "$1");
 }
 
 function sleep(ms: number): Promise<void> {

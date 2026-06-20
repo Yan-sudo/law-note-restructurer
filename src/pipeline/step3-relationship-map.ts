@@ -11,12 +11,14 @@ import type {
     RelationshipMatrix,
     SourceDocument,
 } from "../types";
+import type { TokenUsage } from "../ai/cost";
 
 export async function runStep3(
     app: App,
     settings: LawNoteSettings,
     entities: ExtractedEntities,
-    documents: SourceDocument[]
+    documents: SourceDocument[],
+    usage?: TokenUsage
 ): Promise<RelationshipMatrix | null> {
     const client = createLLMClient(settings);
 
@@ -67,10 +69,16 @@ export async function runStep3(
     }
 
     progressModal.close();
+    if (usage) usage.tokens += client.getTotalTokensUsed();
 
     new Notice(
         `Mapped ${matrix.entries.length} relationships across ${matrix.casesInOrder.length} cases and ${matrix.conceptsInOrder.length} concepts`
     );
+
+    // Unattended mode: skip the review modal.
+    if (settings.autoAcceptReview) {
+        return matrix;
+    }
 
     // User review
     return new Promise((resolve) => {

@@ -18,16 +18,26 @@ import {
 } from "./source-tracking";
 import { ensureFolderExists } from "../utils/vault-helpers";
 import { addCrossCourseLinks } from "../utils/cross-course-linker";
+import {
+    estimateCostUSD,
+    formatTokens,
+    formatUSD,
+    isLocalGeneration,
+    usageSummary,
+    type TokenUsage,
+} from "../ai/cost";
 
 export class PipelineOrchestrator {
     private app: App;
     private settings: LawNoteSettings;
     private state: PipelineState;
     private aborted = false;
+    private persistSettings?: () => Promise<void>;
 
-    constructor(app: App, settings: LawNoteSettings) {
+    constructor(app: App, settings: LawNoteSettings, persistSettings?: () => Promise<void>) {
         this.app = app;
         this.settings = settings;
+        this.persistSettings = persistSettings;
         this.state = {
             currentStep: "idle",
             sourceDocuments: [],
@@ -105,6 +115,17 @@ export class PipelineOrchestrator {
         stopAfter?: string
     ): Promise<void> {
         this.state.sourceDocuments = documents;
+        const usage: TokenUsage = { tokens: 0 };
+
+        // Pre-run cost estimate (input tokens only — output adds more). Cloud only.
+        if (!isLocalGeneration(this.settings)) {
+            const inputTokens = documents.reduce((sum, d) => sum + d.tokenEstimate, 0);
+            new Notice(
+                `Estimated input: ${formatTokens(inputTokens)} tokens · ~${formatUSD(
+                    estimateCostUSD(this.settings.modelName, inputTokens)
+                )}+ (预计花费，输出另计)`
+            );
+        }
 
         const effectiveOutputFolder = this.effectiveOutputFolder(courseSelection.courseName);
         await ensureFolderExists(this.app.vault, effectiveOutputFolder);
@@ -122,7 +143,7 @@ export class PipelineOrchestrator {
 
         // Step 2: Entity extraction (from the supplied documents only)
         this.state.currentStep = "entity-extract";
-        let entities = await runStep2(this.app, this.settings, documents);
+        let entities = await runStep2(this.app, this.settings, documents, usage);
         if (!entities || this.aborted) return;
 
         if (existingState) {
@@ -147,7 +168,7 @@ export class PipelineOrchestrator {
 
         // Step 3: Relationship mapping (over the full merged set)
         this.state.currentStep = "relationship-map";
-        const matrix = await runStep3(this.app, this.settings, entities, documents);
+        const matrix = await runStep3(this.app, this.settings, entities, documents, usage);
         if (!matrix || this.aborted) return;
         this.state.relationshipMatrix = matrix;
 
@@ -160,7 +181,8 @@ export class PipelineOrchestrator {
             matrix,
             effectiveOutputFolder,
             courseSelection.courseName || undefined,
-            diff
+            diff,
+            usage
         );
         this.state.generatedFiles = files;
 
@@ -190,11 +212,17 @@ export class PipelineOrchestrator {
 
         this.state.currentStep = "complete";
 
+        // Cost meter: record this run against the lifetime total and report it.
+        this.settings.lifetimeTokensUsed = (this.settings.lifetimeTokensUsed ?? 0) + usage.tokens;
+        await this.persistSettings?.();
+
         const courseLabel = courseSelection.courseName ? ` [${courseSelection.courseName}]` : "";
         const crossMsg =
             crossLinked > 0 ? ` ${crossLinked} cross-course links added. (${crossLinked} 个跨课程链接)` : "";
         new Notice(
-            `Pipeline complete!${courseLabel} Generated ${files.length} files.${crossMsg} (流程完成！已生成 ${files.length} 个文件)`
+            `Pipeline complete!${courseLabel} Generated ${files.length} files.${crossMsg} ` +
+                `This run: ${usageSummary(this.settings, usage.tokens)}. (本次用量) ` +
+                `(流程完成！已生成 ${files.length} 个文件)`
         );
     }
 
