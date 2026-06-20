@@ -6,6 +6,7 @@ import { runLinkResolver } from "./link-resolver/resolver-orchestrator";
 import { createLLMClient } from "./ai/llm-client-factory";
 import { createEmbedder, embedderSignature } from "./ai/embedder";
 import { AskView, ASK_VIEW_TYPE } from "./rag/ask-view";
+import { HomeView, HOME_VIEW_TYPE } from "./ui/home-view";
 import type { AskMode, ChatTurn } from "./rag/rag-core";
 import {
     answerQuestion,
@@ -28,45 +29,79 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         this.addSettingTab(new LawNoteSettingTab(this.app, this));
 
         this.registerView(ASK_VIEW_TYPE, (leaf) => new AskView(leaf, this));
+        this.registerView(HOME_VIEW_TYPE, (leaf) => new HomeView(leaf, this));
+
+        // Graphical entry points: a control-panel ribbon + a quick chat ribbon.
+        this.addRibbonIcon("scale", "Law Notes panel (控制台)", () => {
+            void this.openHomePanel();
+        });
         this.addRibbonIcon("search", "Ask My Notes (问我的笔记)", () => {
-            void this.activateAskView();
+            this.openAskPanel();
+        });
+
+        this.addCommand({
+            id: "open-law-notes-panel",
+            name: "Open Law Notes panel (打开控制台)",
+            callback: () => this.openHomePanel(),
         });
 
         this.addCommand({
             id: "start-restructure-pipeline",
             name: "Restructure Legal Notes (重构法学笔记)",
-            callback: () => this.startPipeline(),
+            callback: () => this.runFullPipeline(),
         });
 
         this.addCommand({
             id: "extract-entities-only",
             name: "Extract Legal Entities Only (仅提取实体)",
-            callback: () => this.startPipeline("entity-extract"),
+            callback: () => this.runFullPipeline("entity-extract"),
         });
 
         this.addCommand({
             id: "update-knowledge-base",
             name: "Update Knowledge Base (增量更新)",
-            callback: () => this.startIncrementalUpdate(),
+            callback: () => this.updateKnowledgeBase(),
         });
 
         this.addCommand({
             id: "resolve-unresolved-links",
             name: "Resolve Unresolved Links (解析未解析链接)",
-            callback: () => runLinkResolver(this.app, this.settings),
+            callback: () => this.resolveLinks(),
         });
 
         this.addCommand({
             id: "ask-my-notes",
             name: "Ask My Notes (问我的笔记)",
-            callback: () => this.activateAskView(),
+            callback: () => this.openAskPanel(),
         });
 
         this.addCommand({
             id: "rebuild-notes-index",
             name: "Rebuild Notes Index (重建笔记索引)",
-            callback: () => this.rebuildNotesIndex(),
+            callback: () => this.rebuildIndex(),
         });
+    }
+
+    // ── Public actions (shared by commands, the ribbon, and the Home panel) ──
+
+    runFullPipeline(stopAfter?: string): void {
+        this.startPipeline(stopAfter);
+    }
+    updateKnowledgeBase(): void {
+        this.startIncrementalUpdate();
+    }
+    resolveLinks(): void {
+        runLinkResolver(this.app, this.settings);
+    }
+    openAskPanel(): void {
+        void this.activateAskView();
+    }
+    rebuildIndex(): void {
+        void this.rebuildNotesIndex();
+    }
+
+    private async openHomePanel(): Promise<void> {
+        await this.revealView(HOME_VIEW_TYPE);
     }
 
     private get ragIndexPath(): string {
@@ -88,14 +123,19 @@ export default class LawNoteRestructurerPlugin extends Plugin {
     }
 
     /** Open (or reveal) the Ask My Notes panel in the right sidebar. */
-    private async activateAskView(): Promise<void> {
+    private activateAskView(): Promise<void> {
+        return this.revealView(ASK_VIEW_TYPE);
+    }
+
+    /** Open (or focus) a sidebar view of the given type. */
+    private async revealView(type: string): Promise<void> {
         const { workspace } = this.app;
-        let leaf = workspace.getLeavesOfType(ASK_VIEW_TYPE)[0];
+        let leaf = workspace.getLeavesOfType(type)[0];
         if (!leaf) {
             const right = workspace.getRightLeaf(false);
             if (!right) return;
             leaf = right;
-            await leaf.setViewState({ type: ASK_VIEW_TYPE, active: true });
+            await leaf.setViewState({ type, active: true });
         }
         await workspace.revealLeaf(leaf);
     }
