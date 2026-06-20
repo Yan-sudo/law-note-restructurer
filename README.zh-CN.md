@@ -105,6 +105,25 @@ npm install && npm run build
 | 生成闪卡 | 从规则与判决生成闪卡与 Anki 导出 | 开 |
 | CourtListener 令牌 | 可选，用于美国判例查询 | — |
 
+### 用 Ollama 做本地嵌入（可选，隐私推荐）
+
+让所有嵌入（语义去重、相关链接、Ask My Notes 检索）都在你自己机器上跑——离线、免费、不限额、数据不出本机：
+
+1. 安装 [Ollama](https://ollama.com) 并确保它在运行。
+2. 拉取嵌入模型：`ollama pull nomic-embed-text`。
+3. 在 **设置 → Embedding Provider** 选 **Ollama (local)**。
+4. 点 **Test connection（测试连接）**——应显示 `✓ Ollama OK — N-dimensional embeddings`。
+
+如果测试报 **403 / CORS** 错误，需允许 Obsidian 访问 Ollama 并重启：
+
+```bash
+# macOS
+launchctl setenv OLLAMA_ORIGINS "*"
+# Linux / Windows：启动 Ollama 前设置环境变量 OLLAMA_ORIGINS=*（或 app://obsidian.md）
+```
+
+> 只有**嵌入**走本地;Ask My Notes 的*回答生成*仍用 Gemini(完全本地的生成模型已在规划中)。
+
 ---
 
 ## 快速上手

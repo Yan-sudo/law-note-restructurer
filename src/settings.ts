@@ -1,5 +1,6 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type LawNoteRestructurerPlugin from "./main";
+import { createEmbedder } from "./ai/embedder";
 
 export class LawNoteSettingTab extends PluginSettingTab {
     plugin: LawNoteRestructurerPlugin;
@@ -100,6 +101,27 @@ export class LawNoteSettingTab extends PluginSettingTab {
                             this.plugin.settings.ollamaEmbeddingModel = value.trim();
                             await this.plugin.saveSettings();
                         })
+                );
+
+            new Setting(containerEl)
+                .setName("Test Ollama connection")
+                .setDesc("Embed a short string to confirm Ollama is reachable and the model works.")
+                .addButton((btn) =>
+                    btn.setButtonText("Test connection").onClick(async () => {
+                        btn.setDisabled(true).setButtonText("Testing…");
+                        try {
+                            const [vec] = await createEmbedder(this.plugin.settings).embedTexts(["test"]);
+                            new Notice(
+                                vec && vec.length
+                                    ? `✓ Ollama OK — ${vec.length}-dimensional embeddings.`
+                                    : "✗ Ollama returned an empty embedding."
+                            );
+                        } catch (error) {
+                            new Notice(error instanceof Error ? error.message : String(error));
+                        } finally {
+                            btn.setDisabled(false).setButtonText("Test connection");
+                        }
+                    })
                 );
         }
 
