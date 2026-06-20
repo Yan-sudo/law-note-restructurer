@@ -35,15 +35,18 @@ export class OutlineOptionsModal extends Modal {
 
         new Setting(contentEl)
             .setName("Heading levels / 标题层级")
-            .setDesc("How deep the headings go: 1 = sections only, 2 = + sub-sections, 3 = + leaf groups.")
-            .addDropdown((d) =>
-                d
-                    .addOption("1", "1 level / 仅章节")
-                    .addOption("2", "2 levels / 章节 + 子目录")
-                    .addOption("3", "3 levels / 三级标题")
-                    .setValue(String(this.opts.levels))
-                    .onChange((v) => (this.opts.levels = Number(v)))
-            );
+            .setDesc(
+                "Max heading depth. Markdown has 6 levels (#…######) and outlines start at ##, " +
+                "so 5+ caps real headings at ###### and nests deeper with bold + lists. " +
+                "“Auto” goes as deep as the material needs."
+            )
+            .addDropdown((d) => {
+                d.addOption("0", "Auto (as deep as needed) / 自动");
+                for (let n = 1; n <= 7; n++) {
+                    d.addOption(String(n), `${n} level${n === 1 ? "" : "s"}`);
+                }
+                d.setValue(String(this.opts.levels)).onChange((v) => (this.opts.levels = Number(v)));
+            });
 
         new Setting(contentEl)
             .setName("Sections in TOC / 目录章节数")
