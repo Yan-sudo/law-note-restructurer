@@ -4,6 +4,7 @@ import type { Embedder } from "../ai/embedder";
 import {
     buildPrompt,
     chunkMarkdown,
+    isIndexableNote,
     rankBySimilarity,
     uniqueSources,
     type AskMode,
@@ -72,8 +73,10 @@ export async function buildIndex(
             result[file.path] = prev; // unchanged → reuse embeddings, no API call
             continue;
         }
-        result[file.path] = { mtime, chunks: [] };
         const content = await vault.cachedRead(file);
+        // Skip stub / reference pages so they don't dilute retrieval.
+        if (!isIndexableNote(content)) continue;
+        result[file.path] = { mtime, chunks: [] };
         for (const text of chunkMarkdown(content)) {
             pending.push({ path: file.path, title: file.basename, text });
         }
@@ -121,7 +124,8 @@ export async function answerQuestion(
     question: string,
     history: ChatTurn[] = [],
     mode: AskMode = "qa",
-    topK = 6
+    topK = 6,
+    onChunk?: (text: string, accumulated: string) => void
 ): Promise<RagAnswer> {
     const chunks = allChunks(index);
     if (chunks.length === 0) {
@@ -143,6 +147,9 @@ export async function answerQuestion(
         return { answer: "No relevant notes found in this folder for that topic.", sources: [] };
     }
 
-    const answer = await generator.generate(buildPrompt(mode, question, contexts, history));
+    const prompt = buildPrompt(mode, question, contexts, history);
+    const answer = onChunk
+        ? await generator.generateStreaming(prompt, onChunk)
+        : await generator.generate(prompt);
     return { answer, sources: uniqueSources(contexts) };
 }

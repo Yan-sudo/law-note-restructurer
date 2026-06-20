@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
     stripFrontmatter,
     chunkMarkdown,
+    isIndexableNote,
     rankBySimilarity,
     buildRagPrompt,
     buildPrompt,
@@ -28,6 +29,31 @@ describe("stripFrontmatter / chunkMarkdown", () => {
         const chunks = chunkMarkdown(MD, 1000);
         expect(chunks).toHaveLength(1);
         expect(chunks[0]).toContain("Gamma paragraph.");
+    });
+});
+
+describe("isIndexableNote", () => {
+    const longBody = "This is a substantive concept definition. ".repeat(5);
+
+    it("indexes a normal pipeline concept page", () => {
+        const md = `---\ntags:\n  - law/concept\ngenerated-by: law-note-restructurer\n---\n\n# Estoppel\n\n${longBody}`;
+        expect(isIndexableNote(md)).toBe(true);
+    });
+
+    it("skips link-resolver reference pages (frontmatter has a source field)", () => {
+        const md = `---\ntags:\n  - law/case\nsource: courtlistener\nsource-url: "http://x"\n---\n\n# Some v. Case\n\n${longBody}`;
+        expect(isIndexableNote(md)).toBe(false);
+    });
+
+    it("skips US/CN stub placeholder pages", () => {
+        const us = `---\nsource: stub\n---\n\n# Foo v. Bar\n\n> [!warning] Auto-fetch unavailable\n\n## Holding\n\n*To be filled in*`;
+        const cn = `---\ntags:\n  - law/cn-case\n---\n\n# 某案\n\n> [!warning] 自动获取不可用\n\n## 裁判要旨\n\n*待填写*`;
+        expect(isIndexableNote(us)).toBe(false);
+        expect(isIndexableNote(cn)).toBe(false);
+    });
+
+    it("skips near-empty notes", () => {
+        expect(isIndexableNote("---\ntags: x\n---\n\nTBD")).toBe(false);
     });
 });
 

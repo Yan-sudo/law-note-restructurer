@@ -242,7 +242,11 @@ export default class LawNoteRestructurerPlugin extends Plugin {
      * (unchanged files keep their embeddings), scoped to the chosen folder, and
      * the answer is appended to the conversation history.
      */
-    async askQuestion(question: string, mode: AskMode = "qa"): Promise<ChatTurn> {
+    async askQuestion(
+        question: string,
+        mode: AskMode = "qa",
+        onChunk?: (text: string, accumulated: string) => void
+    ): Promise<ChatTurn> {
         if (this.missingGeminiKey()) {
             throw new Error("Set your Gemini API key in Settings first.");
         }
@@ -270,7 +274,9 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             this.ragIndex,
             question,
             this.chatHistory,
-            mode
+            mode,
+            6,
+            onChunk
         );
         const turn: ChatTurn = { question, answer, sources };
         this.chatHistory.push(turn);

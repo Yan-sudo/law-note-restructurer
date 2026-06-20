@@ -19,6 +19,33 @@ export function stripFrontmatter(md: string): string {
     return md.replace(FRONTMATTER_RE, "").trim();
 }
 
+/** Notes whose body (sans frontmatter) is shorter than this are treated as stubs. */
+const MIN_INDEX_CHARS = 100;
+
+/** Text fragments that identify an unresolved-link / placeholder stub page. */
+const STUB_MARKERS = [
+    "Auto-fetch unavailable",
+    "自动获取不可用",
+    "*To be filled in*",
+    "*待填写*",
+];
+
+/**
+ * Should this note be embedded for Ask My Notes? We skip pages that would only
+ * add noise to retrieval:
+ *  - Link-resolver reference pages — raw fetched case/statute dumps. These carry
+ *    a `source:` frontmatter field that the pipeline's own pages never set.
+ *  - Unresolved-link stub placeholders ("*To be filled in*" / "*待填写*").
+ *  - Near-empty notes.
+ * Keeping these out keeps Ask My Notes focused on the student's curated notes.
+ */
+export function isIndexableNote(content: string): boolean {
+    const fm = content.match(/^---\n([\s\S]*?)\n---/);
+    if (fm && /^source:\s*\S/m.test(fm[1])) return false;
+    if (STUB_MARKERS.some((marker) => content.includes(marker))) return false;
+    return stripFrontmatter(content).length >= MIN_INDEX_CHARS;
+}
+
 /**
  * Split markdown into chunks of at most ~`maxChars`, breaking on paragraph
  * boundaries so chunks stay semantically coherent. Frontmatter is dropped.

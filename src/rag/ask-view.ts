@@ -55,6 +55,13 @@ export class AskView extends ItemView {
     private async addAssistantBubble(turn: ChatTurn): Promise<void> {
         const wrap = this.historyEl.createDiv({ cls: "lnr-chat-turn lnr-chat-assistant" });
         const bubble = wrap.createDiv({ cls: "lnr-chat-bubble" });
+        await this.fillAssistant(wrap, bubble, turn);
+    }
+
+    /** Final render of an answer into an (existing) bubble: markdown + source chips. */
+    private async fillAssistant(wrap: HTMLElement, bubble: HTMLElement, turn: ChatTurn): Promise<void> {
+        bubble.empty();
+        bubble.removeClass("lnr-streaming");
         // Render markdown so formatting + [[wikilinks]] are native and clickable.
         await MarkdownRenderer.render(this.app, turn.answer, bubble, "", this);
 
@@ -152,22 +159,40 @@ export class AskView extends ItemView {
             sendBtn.disabled = true;
             this.addUserBubble(question);
 
-            // Typing indicator
-            const typing = this.historyEl.createDiv({ cls: "lnr-chat-turn lnr-chat-assistant" });
-            const dots = typing.createDiv({ cls: "lnr-chat-bubble lnr-typing" });
+            // Assistant turn: typing dots until the first token, then stream into it.
+            const wrap = this.historyEl.createDiv({ cls: "lnr-chat-turn lnr-chat-assistant" });
+            const bubble = wrap.createDiv({ cls: "lnr-chat-bubble" });
+            const dots = bubble.createDiv({ cls: "lnr-typing" });
             dots.createSpan();
             dots.createSpan();
             dots.createSpan();
             this.scrollToBottom();
 
+            let streamStarted = false;
+            const onChunk = this.plugin.settings.enableStreaming
+                ? (_text: string, accumulated: string): void => {
+                      if (!streamStarted) {
+                          bubble.empty();
+                          bubble.addClass("lnr-streaming");
+                          streamStarted = true;
+                      }
+                      // Plain text while streaming (cheap); markdown-rendered once complete.
+                      bubble.setText(accumulated);
+                      this.scrollToBottom();
+                  }
+                : undefined;
+
             try {
-                const turn = await this.plugin.askQuestion(question, modeSelect.value as AskMode);
-                typing.remove();
-                await this.addAssistantBubble(turn);
+                const turn = await this.plugin.askQuestion(
+                    question,
+                    modeSelect.value as AskMode,
+                    onChunk
+                );
+                await this.fillAssistant(wrap, bubble, turn);
             } catch (error) {
-                typing.remove();
-                const wrap = this.historyEl.createDiv({ cls: "lnr-chat-turn lnr-chat-assistant" });
-                wrap.createDiv({
+                wrap.remove();
+                const errWrap = this.historyEl.createDiv({ cls: "lnr-chat-turn lnr-chat-assistant" });
+                errWrap.createDiv({
                     cls: "lnr-chat-bubble lnr-error",
                     text: error instanceof Error ? error.message : String(error),
                 });

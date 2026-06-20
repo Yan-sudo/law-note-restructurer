@@ -598,6 +598,11 @@
     color: var(--text-normal);
 }
 
+/* While streaming we show raw text; preserve newlines until the final markdown render. */
+.lnr-chat-bubble.lnr-streaming {
+    white-space: pre-wrap;
+}
+
 .lnr-chat-bubble > :first-child {
     margin-top: 0;
 }
