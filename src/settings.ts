@@ -13,14 +13,8 @@ export class LawNoteSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl("h2", { text: "Law Note Restructurer" });
-        containerEl.createEl("p", {
-            text: "AI-powered restructuring of legal notes into structured knowledge.",
-            cls: "setting-item-description",
-        });
-
         // --- AI Configuration ---
-        containerEl.createEl("h3", { text: "AI Configuration" });
+        new Setting(containerEl).setName("AI configuration").setHeading();
 
         new Setting(containerEl)
             .setName("Gemini API Key")
@@ -163,7 +157,7 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         // --- Output Configuration ---
-        containerEl.createEl("h3", { text: "Output Configuration" });
+        new Setting(containerEl).setName("Output configuration").setHeading();
 
         new Setting(containerEl)
             .setName("Output Folder")
@@ -252,7 +246,7 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         // --- Link Resolver Configuration ---
-        containerEl.createEl("h3", { text: "Link Resolver (链接解析)" });
+        new Setting(containerEl).setName("Link resolver (链接解析)").setHeading();
 
         containerEl.createEl("p", {
             text: "Settings for the 'Resolve Unresolved Links' command. Fetches legal data from free online databases.",
