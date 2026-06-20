@@ -105,6 +105,25 @@ Open Settings → Law Note Restructurer:
 | Generate Flashcards | Spaced Repetition + Anki export from rules/holdings | On |
 | CourtListener Token | Optional, for US case lookups | — |
 
+### Local embeddings with Ollama (optional, recommended for privacy)
+
+Run all embeddings (semantic dedup, related links, Ask My Notes retrieval) on your own machine — offline, free, no quota, and your notes never leave the device:
+
+1. Install [Ollama](https://ollama.com) and make sure it's running.
+2. Pull an embedding model: `ollama pull nomic-embed-text`.
+3. In **Settings → Embedding Provider**, choose **Ollama (local)**.
+4. Click **Test connection** — you should see `✓ Ollama OK — N-dimensional embeddings`.
+
+If the test shows a **403 / CORS** error, allow Obsidian to reach Ollama and restart it:
+
+```bash
+# macOS
+launchctl setenv OLLAMA_ORIGINS "*"
+# Linux / Windows: set the env var OLLAMA_ORIGINS=*  (or app://obsidian.md) before starting Ollama
+```
+
+> Only **embeddings** go local. Answer *generation* in Ask My Notes still uses Gemini (a fully local generator is on the roadmap).
+
 ---
 
 ## Quick Start
