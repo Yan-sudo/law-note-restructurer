@@ -102,4 +102,9 @@ describe("buildRagPrompt / uniqueSources", () => {
         expect(compare).toContain("United States");
         expect(compare).toContain("China");
     });
+
+    it("encodes the requested answer length", () => {
+        expect(buildPrompt("qa", "x", contexts, [], "brief")).toContain("BRIEF");
+        expect(buildPrompt("qa", "x", contexts, [], "detailed")).toContain("THOROUGH");
+    });
 });

@@ -46,6 +46,12 @@ export interface LawNoteSettings {
     autoAcceptReview: boolean;
     /** Cumulative API tokens billed across every run (cost meter). */
     lifetimeTokensUsed: number;
+    /** Default verbosity for Ask My Notes answers. */
+    askLength: "brief" | "standard" | "detailed";
+    /** How often to auto-update the knowledge base in the background. */
+    autoUpdateInterval: "off" | "15m" | "1h" | "6h" | "1d";
+    /** Course the auto-update targets ("" = the default output folder). */
+    autoUpdateCourse: string;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -78,6 +84,9 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     semanticLinkThreshold: 0.75,
     autoAcceptReview: false,
     lifetimeTokensUsed: 0,
+    askLength: "standard",
+    autoUpdateInterval: "off",
+    autoUpdateCourse: "",
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,

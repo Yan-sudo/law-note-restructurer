@@ -7,6 +7,13 @@ import { createLLMClient } from "./ai/llm-client-factory";
 import { createEmbedder, embedderSignature } from "./ai/embedder";
 import { AskView, ASK_VIEW_TYPE } from "./rag/ask-view";
 import { HomeView, HOME_VIEW_TYPE } from "./ui/home-view";
+import { ProgressModal } from "./ui/progress-modal";
+import {
+    ProgressController,
+    setProgressController,
+    formatElapsed,
+    type ProgressState,
+} from "./ui/progress";
 import { CourseSelectModal, type CourseSelection } from "./ui/course-select-modal";
 import { OutlineOptionsModal } from "./ui/outline-options-modal";
 import { TocReorderModal } from "./ui/toc-reorder-modal";
@@ -29,11 +36,24 @@ export default class LawNoteRestructurerPlugin extends Plugin {
     private ragIndex: RagIndex | null = null;
     /** In-memory Ask My Notes conversation (survives panel close/reopen). */
     chatHistory: ChatTurn[] = [];
+    /** Shared progress state for long tasks (modal + side panel + status bar). */
+    readonly progress = new ProgressController();
+    private statusBarEl: HTMLElement | null = null;
+    private autoUpdateTimer: number | null = null;
 
     async onload(): Promise<void> {
         await this.loadSettings();
 
         this.addSettingTab(new LawNoteSettingTab(this.app, this));
+
+        // Shared progress controller drives the status bar; the modal + Home card
+        // also observe it so tasks stay visible when the pop-up is minimized.
+        setProgressController(this.progress);
+        this.statusBarEl = this.addStatusBarItem();
+        this.statusBarEl.addClass("lnr-statusbar");
+        this.statusBarEl.addEventListener("click", () => void this.openHomePanel());
+        this.register(this.progress.subscribe((s) => this.renderStatusBar(s)));
+        this.setupAutoUpdate();
 
         this.registerView(ASK_VIEW_TYPE, (leaf) => new AskView(leaf, this));
         this.registerView(HOME_VIEW_TYPE, (leaf) => new HomeView(leaf, this));
@@ -139,19 +159,30 @@ export default class LawNoteRestructurerPlugin extends Plugin {
 
         const client = createLLMClient(this.settings);
 
-        new Notice("Proposing a table of contents… (生成目录中)");
+        // TOC generation — shown in a minimizable progress pop-up (and the side panel).
+        const tocProgress = new ProgressModal(this.app);
+        tocProgress.open();
+        tocProgress.setStep("Proposing a table of contents… (生成目录中)");
+        tocProgress.setIndeterminate();
+        tocProgress.onCancelClick(() => client.abort());
         let toc: Toc;
         try {
             toc = await generateToc(client, state.entities, options, this.settings.language);
+            tocProgress.close();
         } catch (error) {
-            new Notice(`TOC failed: ${error instanceof Error ? error.message : String(error)}`);
+            tocProgress.addError(error instanceof Error ? error.message : String(error));
+            tocProgress.showStopped("TOC generation failed (目录生成失败)");
             return;
         }
 
         const finalToc = await this.promptTocReorder(toc);
         if (!finalToc) return;
 
-        new Notice("Generating outline… (生成大纲中)");
+        const outProgress = new ProgressModal(this.app);
+        outProgress.open();
+        outProgress.setStep("Generating outline… (生成大纲中)");
+        outProgress.setIndeterminate();
+        outProgress.onCancelClick(() => client.abort());
         let markdown: string;
         try {
             markdown = await generateOutlineFromToc(
@@ -161,8 +192,10 @@ export default class LawNoteRestructurerPlugin extends Plugin {
                 options,
                 this.settings.language
             );
+            outProgress.close();
         } catch (error) {
-            new Notice(`Outline failed: ${error instanceof Error ? error.message : String(error)}`);
+            outProgress.addError(error instanceof Error ? error.message : String(error));
+            outProgress.showStopped("Outline generation failed (大纲生成失败)");
             return;
         }
 
@@ -276,7 +309,8 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             this.chatHistory,
             mode,
             6,
-            onChunk
+            onChunk,
+            this.settings.askLength
         );
         const turn: ChatTurn = { question, answer, sources };
         this.chatHistory.push(turn);
@@ -353,9 +387,71 @@ export default class LawNoteRestructurerPlugin extends Plugin {
 
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
+        this.setupAutoUpdate();
+    }
+
+    /** Render the bottom status-bar item from the shared progress state. */
+    private renderStatusBar(s: ProgressState): void {
+        const el = this.statusBarEl;
+        if (!el) return;
+        if (!s.active && !s.stopped) {
+            el.setText("");
+            el.style.display = "none";
+            return;
+        }
+        el.style.display = "";
+        const pct = s.percent === null ? "" : ` ${Math.round(s.percent)}%`;
+        const elapsed = s.startedAt ? ` · ${formatElapsed(Date.now() - s.startedAt)}` : "";
+        const icon = s.stopped ? "⚠" : "⚖";
+        el.setText(`${icon} ${s.title}${pct}${elapsed}`);
+    }
+
+    /** (Re)arm the background auto-update timer from settings. */
+    private setupAutoUpdate(): void {
+        if (this.autoUpdateTimer !== null) {
+            window.clearInterval(this.autoUpdateTimer);
+            this.autoUpdateTimer = null;
+        }
+        const ms = autoUpdateIntervalMs(this.settings.autoUpdateInterval);
+        if (ms <= 0) return;
+        this.autoUpdateTimer = window.setInterval(() => void this.autoUpdateTick(), ms);
+        this.registerInterval(this.autoUpdateTimer);
+    }
+
+    /** Background incremental update of the designated course (no prompts). */
+    private async autoUpdateTick(): Promise<void> {
+        if (this.progress.isActive() || this.missingGeminiKey()) return;
+        // Force auto-accept so the background run never blocks on a review modal.
+        const settings = { ...this.settings, autoAcceptReview: true };
+        const orchestrator = new PipelineOrchestrator(this.app, settings, () => this.saveSettings());
+        try {
+            await orchestrator.incrementalForCourse(this.settings.autoUpdateCourse, {
+                silent: true,
+            });
+        } catch (error) {
+            console.warn("[law-restructurer] Auto-update failed:", error);
+        }
     }
 
     onunload(): void {
         this.pipeline?.abort();
+        setProgressController(null);
+        if (this.autoUpdateTimer !== null) window.clearInterval(this.autoUpdateTimer);
+    }
+}
+
+/** Auto-update interval in milliseconds (0 = off). */
+function autoUpdateIntervalMs(interval: LawNoteSettings["autoUpdateInterval"]): number {
+    switch (interval) {
+        case "15m":
+            return 15 * 60 * 1000;
+        case "1h":
+            return 60 * 60 * 1000;
+        case "6h":
+            return 6 * 60 * 60 * 1000;
+        case "1d":
+            return 24 * 60 * 60 * 1000;
+        default:
+            return 0;
     }
 }

@@ -2,6 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type LawNoteRestructurerPlugin from "./main";
 import { createEmbedder } from "./ai/embedder";
 import { estimateCostUSD, formatTokens, formatUSD, isLocalGeneration } from "./ai/cost";
+import { listCoursesWithState } from "./pipeline/state-persistence";
 
 export class LawNoteSettingTab extends PluginSettingTab {
     plugin: LawNoteRestructurerPlugin;
@@ -396,6 +397,68 @@ export class LawNoteSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     })
             );
+
+        // --- Ask My Notes ---
+        new Setting(containerEl).setName("Ask my notes (问答)").setHeading();
+
+        new Setting(containerEl)
+            .setName("Answer length")
+            .setDesc("Default verbosity for answers. You can also change it per-question in the Ask panel.")
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("brief", "Brief (1–3 sentences)")
+                    .addOption("standard", "Standard (a paragraph or two)")
+                    .addOption("detailed", "Detailed (thorough, structured)")
+                    .setValue(this.plugin.settings.askLength)
+                    .onChange(async (value) => {
+                        this.plugin.settings.askLength = value as "brief" | "standard" | "detailed";
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        // --- Automation ---
+        new Setting(containerEl).setName("Automation (自动更新)").setHeading();
+
+        new Setting(containerEl)
+            .setName("Auto-update database")
+            .setDesc(
+                "Periodically run an incremental update in the background (only does work when " +
+                "notes changed). Progress shows in the status bar / side panel. (后台自动增量更新)"
+            )
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("off", "Off")
+                    .addOption("15m", "Every 15 minutes")
+                    .addOption("1h", "Every hour")
+                    .addOption("6h", "Every 6 hours")
+                    .addOption("1d", "Every day")
+                    .setValue(this.plugin.settings.autoUpdateInterval)
+                    .onChange(async (value) => {
+                        this.plugin.settings.autoUpdateInterval =
+                            value as "off" | "15m" | "1h" | "6h" | "1d";
+                        await this.plugin.saveSettings();
+                        this.display(); // show/hide the course picker
+                    })
+            );
+
+        if (this.plugin.settings.autoUpdateInterval !== "off") {
+            const courses = listCoursesWithState(this.app.vault, this.plugin.settings.outputFolder);
+            new Setting(containerEl)
+                .setName("Auto-update course")
+                .setDesc("Which course the background updater targets.")
+                .addDropdown((dropdown) => {
+                    dropdown.addOption("", "Default output folder");
+                    for (const name of courses) {
+                        if (name) dropdown.addOption(name, name);
+                    }
+                    dropdown
+                        .setValue(this.plugin.settings.autoUpdateCourse)
+                        .onChange(async (value) => {
+                            this.plugin.settings.autoUpdateCourse = value;
+                            await this.plugin.saveSettings();
+                        });
+                });
+        }
 
         // --- Link Resolver Configuration ---
         new Setting(containerEl).setName("Link resolver (链接解析)").setHeading();

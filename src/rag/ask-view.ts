@@ -120,6 +120,22 @@ export class AskView extends ItemView {
             opt.value = m.value;
         }
 
+        // Answer length
+        const lengthSelect = controls.createEl("select", { cls: "dropdown" });
+        for (const [value, label] of [
+            ["brief", "Brief"],
+            ["standard", "Standard"],
+            ["detailed", "Detailed"],
+        ] as const) {
+            const opt = lengthSelect.createEl("option", { text: label });
+            opt.value = value;
+        }
+        lengthSelect.value = this.plugin.settings.askLength;
+        lengthSelect.addEventListener("change", async () => {
+            this.plugin.settings.askLength = lengthSelect.value as "brief" | "standard" | "detailed";
+            await this.plugin.saveSettings();
+        });
+
         const select = controls.createEl("select", { cls: "dropdown" });
         for (const o of this.scopeOptions()) {
             const opt = select.createEl("option", { text: o.label });

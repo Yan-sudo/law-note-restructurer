@@ -760,6 +760,109 @@
     color: var(--text-muted);
 }
 
+.lnr-home-action.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.lnr-home-action.is-disabled:hover {
+    background: var(--background-secondary);
+    border-color: var(--background-modifier-border);
+}
+
+.lnr-home-note {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    margin: 0 0 var(--size-2-3);
+}
+
+.lnr-home-note.lnr-home-ok {
+    color: var(--text-success, var(--text-muted));
+}
+
+.lnr-home-note.lnr-home-warn {
+    color: var(--text-warning, var(--text-muted));
+}
+
+/* ============================================
+   Non-blocking progress (side panel card + status bar)
+   ============================================ */
+.lnr-statusbar {
+    cursor: pointer;
+}
+
+.lnr-progress-wrap:empty {
+    display: none;
+}
+
+.lnr-progress-card {
+    border: 1px solid var(--interactive-accent);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+    padding: var(--size-4-2) var(--size-4-3);
+    margin-bottom: var(--size-4-3);
+}
+
+.lnr-progress-card.is-error {
+    border-color: var(--text-error);
+}
+
+.lnr-progress-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--size-2-3);
+}
+
+.lnr-progress-title {
+    font-weight: var(--font-medium);
+    color: var(--text-normal);
+}
+
+.lnr-progress-meta {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    flex: 0 0 auto;
+}
+
+.lnr-progress-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--background-modifier-border);
+    overflow: hidden;
+    margin: var(--size-2-2) 0;
+}
+
+.lnr-progress-fill {
+    height: 100%;
+    width: 0;
+    background: var(--interactive-accent);
+    transition: width 0.2s ease;
+}
+
+.lnr-progress-card.is-error .lnr-progress-fill {
+    background: var(--text-error);
+}
+
+.lnr-progress-fill.is-indeterminate {
+    width: 40% !important;
+    animation: law-restructurer-indeterminate 1.5s infinite ease-in-out;
+}
+
+.lnr-progress-detail {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lnr-progress-actions {
+    display: flex;
+    gap: var(--size-2-2);
+    margin-top: var(--size-2-2);
+}
+
 /* ============================================
    Outline builder — drag-to-reorder TOC
    ============================================ */

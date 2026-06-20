@@ -102,6 +102,16 @@ export interface ChatTurn {
 /** Ask My Notes interaction modes — each is a different grounded prompt. */
 export type AskMode = "qa" | "irac" | "practice" | "socratic" | "compare";
 
+/** How long the answer should be. */
+export type AskLength = "brief" | "standard" | "detailed";
+
+const LENGTH_TEXT: Record<AskLength, string> = {
+    brief: "Keep it BRIEF: 1–3 sentences, just the core answer, no preamble.",
+    standard: "Aim for a FOCUSED answer of one or two short paragraphs.",
+    detailed:
+        "Be THOROUGH: a well-structured answer with headings or bullet points and worked detail where it helps.",
+};
+
 // Shared policy for every mode. Notes-first, but *helpful*: supplement with
 // general legal knowledge (clearly labeled) instead of refusing when the notes
 // are thin — and always answer in the student's language.
@@ -139,7 +149,8 @@ export function buildPrompt(
     mode: AskMode,
     input: string,
     contexts: IndexedChunk[],
-    history: ChatTurn[] = []
+    history: ChatTurn[] = [],
+    length: AskLength = "standard"
 ): string {
     const notes = contexts
         .map((c, i) => `[${i + 1}] (Source: [[${c.title}]])\n${c.text}`)
@@ -157,6 +168,8 @@ export function buildPrompt(
     return `${COMMON_POLICY}
 
 Task: ${m.task}
+
+Length: ${LENGTH_TEXT[length]}
 
 ${convo}${m.inputHeading}
 ${input}

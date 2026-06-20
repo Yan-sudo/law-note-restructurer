@@ -75,26 +75,49 @@ export class PipelineOrchestrator {
         const courseSelection = await this.selectCourse();
         if (!courseSelection || this.aborted) return;
 
-        const folder = this.effectiveOutputFolder(courseSelection.courseName);
+        await this.incrementalForCourse(courseSelection.courseName, { silent: false });
+    }
+
+    /**
+     * Incremental update for one course without the course picker. `silent`
+     * suppresses the "nothing to do" notices (used by the background
+     * auto-updater). Returns the number of changed notes processed.
+     */
+    async incrementalForCourse(
+        courseName: string,
+        opts: { silent?: boolean } = {}
+    ): Promise<number> {
+        this.aborted = false;
+        const silent = opts.silent ?? false;
+
+        const folder = this.effectiveOutputFolder(courseName);
         const state = await loadPipelineState(this.app.vault, folder);
         if (!state) {
-            new Notice("No saved knowledge base for this course yet. Run 'Restructure Legal Notes' first.");
-            return;
+            if (!silent) {
+                new Notice("No saved knowledge base for this course yet. Run 'Restructure Legal Notes' first.");
+            }
+            return 0;
         }
         const recorded = state.sources ?? [];
         if (recorded.length === 0) {
-            new Notice("This course predates change-tracking. Run the full pipeline once to enable updates.");
-            return;
+            if (!silent) {
+                new Notice("This course predates change-tracking. Run the full pipeline once to enable updates.");
+            }
+            return 0;
         }
 
         const current = this.scanSignatures(watchedFolders(recorded));
         const changedPaths = detectChangedSources(current, recorded);
         if (changedPaths.length === 0) {
-            new Notice("Knowledge base is up to date — no new or changed notes. (无新增/改动)");
-            return;
+            if (!silent) {
+                new Notice("Knowledge base is up to date — no new or changed notes. (无新增/改动)");
+            }
+            return 0;
         }
 
-        new Notice(`Found ${changedPaths.length} new/changed note(s). Updating… (发现 ${changedPaths.length} 个改动，增量更新中)`);
+        if (!silent) {
+            new Notice(`Found ${changedPaths.length} new/changed note(s). Updating… (发现 ${changedPaths.length} 个改动，增量更新中)`);
+        }
 
         const documents: SourceDocument[] = [];
         for (const path of changedPaths) {
@@ -103,9 +126,10 @@ export class PipelineOrchestrator {
             if (file.extension === "md") documents.push(await parseMarkdownFile(this.app, file));
             else if (file.extension === "docx") documents.push(await parseDocxFile(this.app, file));
         }
-        if (documents.length === 0 || this.aborted) return;
+        if (documents.length === 0 || this.aborted) return 0;
 
-        await this.process(documents, { courseName: courseSelection.courseName, incremental: true });
+        await this.process(documents, { courseName, incremental: true });
+        return documents.length;
     }
 
     /** Shared pipeline body: extract → merge → map → generate → save, given documents + course. */

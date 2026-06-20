@@ -80,11 +80,45 @@ describe("structureText", () => {
 
 describe("prompts", () => {
     it("TOC prompt reflects detail + structure", () => {
-        const p = buildTocPrompt(entities(), { detail: "detailed", structure: "lifecycle", customInstruction: "" }, "en");
+        const p = buildTocPrompt(
+            entities(),
+            { ...DEFAULT_OUTLINE_OPTIONS, detail: "detailed", structure: "lifecycle" },
+            "en"
+        );
         expect(p).toContain("TABLE OF CONTENTS");
         expect(p).toMatch(/appeal|lifecycle/i);
         expect(p).toContain("Thorough");
         expect(p).toContain("Personal Jurisdiction");
+    });
+
+    it("TOC prompt honors a section-count target and a flat (1-level) request", () => {
+        const p = buildTocPrompt(
+            entities(),
+            { ...DEFAULT_OUTLINE_OPTIONS, levels: 1, sectionCount: 8 },
+            "en"
+        );
+        expect(p).toContain("about 8 top-level sections");
+        expect(p).toContain("Keep it FLAT");
+    });
+
+    it("outline heading rule deepens with levels", () => {
+        const toc: Toc = { sections: [{ title: "A", items: [], subsections: [] }] };
+        const oneLevel = buildOutlineFromTocPrompt(
+            entities(),
+            toc,
+            { ...DEFAULT_OUTLINE_OPTIONS, levels: 1 },
+            "en",
+            "2026-01-01"
+        );
+        expect(oneLevel).toContain("no deeper headings");
+        const threeLevel = buildOutlineFromTocPrompt(
+            entities(),
+            toc,
+            { ...DEFAULT_OUTLINE_OPTIONS, levels: 3 },
+            "en",
+            "2026-01-01"
+        );
+        expect(threeLevel).toContain("####");
     });
 
     it("outline-from-TOC enforces the given section order and renders subsections", () => {

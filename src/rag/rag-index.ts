@@ -7,6 +7,7 @@ import {
     isIndexableNote,
     rankBySimilarity,
     uniqueSources,
+    type AskLength,
     type AskMode,
     type ChatTurn,
     type ChunkEmbedding,
@@ -125,7 +126,8 @@ export async function answerQuestion(
     history: ChatTurn[] = [],
     mode: AskMode = "qa",
     topK = 6,
-    onChunk?: (text: string, accumulated: string) => void
+    onChunk?: (text: string, accumulated: string) => void,
+    length: AskLength = "standard"
 ): Promise<RagAnswer> {
     const chunks = allChunks(index);
     if (chunks.length === 0) {
@@ -147,7 +149,7 @@ export async function answerQuestion(
         return { answer: "No relevant notes found in this folder for that topic.", sources: [] };
     }
 
-    const prompt = buildPrompt(mode, question, contexts, history);
+    const prompt = buildPrompt(mode, question, contexts, history, length);
     const answer = onChunk
         ? await generator.generateStreaming(prompt, onChunk)
         : await generator.generate(prompt);
