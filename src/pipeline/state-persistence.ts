@@ -1,4 +1,4 @@
-import { TFile, Vault } from "obsidian";
+import { TFile, TFolder, Vault } from "obsidian";
 import type { ExtractedEntities, RelationshipMatrix } from "../types";
 import type { SourceSignature } from "./source-tracking";
 
@@ -59,4 +59,23 @@ export async function loadPipelineState(
 export function stateExists(vault: Vault, courseFolder: string): boolean {
     const path = `${courseFolder}/${STATE_FILENAME}`;
     return vault.getAbstractFileByPath(path) instanceof TFile;
+}
+
+/**
+ * Course names under `outputFolder` that already have a saved database
+ * (a `_state.json`). An empty-string entry means the output folder itself holds
+ * a root-level database (no course sub-folder).
+ */
+export function listCoursesWithState(vault: Vault, outputFolder: string): string[] {
+    const names: string[] = [];
+    if (stateExists(vault, outputFolder)) names.push("");
+    const root = vault.getAbstractFileByPath(outputFolder);
+    if (root instanceof TFolder) {
+        for (const child of root.children) {
+            if (child instanceof TFolder && stateExists(vault, child.path)) {
+                names.push(child.name);
+            }
+        }
+    }
+    return names;
 }

@@ -33,6 +33,33 @@ export class OutlineOptionsModal extends Modal {
                     .onChange((v) => (this.opts.detail = v as OutlineDetail))
             );
 
+        new Setting(contentEl)
+            .setName("Heading levels / 标题层级")
+            .setDesc("How deep the headings go: 1 = sections only, 2 = + sub-sections, 3 = + leaf groups.")
+            .addDropdown((d) =>
+                d
+                    .addOption("1", "1 level / 仅章节")
+                    .addOption("2", "2 levels / 章节 + 子目录")
+                    .addOption("3", "3 levels / 三级标题")
+                    .setValue(String(this.opts.levels))
+                    .onChange((v) => (this.opts.levels = Number(v)))
+            );
+
+        new Setting(contentEl)
+            .setName("Sections in TOC / 目录章节数")
+            .setDesc("Roughly how many top-level sections to aim for.")
+            .addDropdown((d) =>
+                d
+                    .addOption("auto", "Auto / 自动")
+                    .addOption("5", "~5")
+                    .addOption("8", "~8")
+                    .addOption("10", "~10")
+                    .addOption("12", "~12")
+                    .addOption("15", "~15")
+                    .setValue(this.opts.sectionCount === "auto" ? "auto" : String(this.opts.sectionCount))
+                    .onChange((v) => (this.opts.sectionCount = v === "auto" ? "auto" : Number(v)))
+            );
+
         const customWrap = contentEl.createDiv();
         const toggleCustom = () => {
             customWrap.style.display = this.opts.structure === "custom" ? "" : "none";

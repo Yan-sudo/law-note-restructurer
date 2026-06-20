@@ -14,12 +14,18 @@ export interface OutlineOptions {
     structure: OutlineStructure;
     /** Free-text instruction used when structure === "custom". */
     customInstruction: string;
+    /** Heading depth: 1 = sections only, 2 = + sub-sections, 3 = + leaf groups. */
+    levels: number;
+    /** Target number of top-level sections, or "auto" to let the model decide. */
+    sectionCount: number | "auto";
 }
 
 export const DEFAULT_OUTLINE_OPTIONS: OutlineOptions = {
     detail: "standard",
     structure: "lecture",
     customInstruction: "",
+    levels: 2,
+    sectionCount: "auto",
 };
 
 const DETAIL_TEXT: Record<OutlineDetail, string> = {
@@ -165,10 +171,15 @@ export function buildTocPrompt(
     options: OutlineOptions,
     language: "zh" | "en" | "mixed"
 ): string {
-    const nesting =
-        options.detail === "concise"
-            ? "Keep it FLAT: each section just lists its item labels in `items`; leave `subsections` empty."
-            : "Use a TWO-LEVEL hierarchy: break each large section into a few `subsections`, each with its own title and 2–6 item labels. Put a doctrine directly in the section's `items` only when it doesn't belong under any subsection.";
+    const flat = options.levels <= 1 || options.detail === "concise";
+    const nesting = flat
+        ? "Keep it FLAT: each section just lists its item labels in `items`; leave `subsections` empty."
+        : "Use a TWO-LEVEL hierarchy: break each large section into a few `subsections`, each with its own title and 2–6 item labels. Put a doctrine directly in the section's `items` only when it doesn't belong under any subsection.";
+
+    const sectionTarget =
+        options.sectionCount === "auto"
+            ? "Use as many top-level sections as the material naturally needs."
+            : `Aim for about ${options.sectionCount} top-level sections (merge or split to land near that number).`;
 
     return `You are organizing a law-school outline. Propose a hierarchical TABLE OF CONTENTS: a list of
 sections, each with optional sub-sections, where the leaf labels name the doctrines/cases covered.
@@ -181,6 +192,9 @@ ${DETAIL_TEXT[options.detail]}
 
 ## Nesting
 ${nesting}
+
+## Section count
+${sectionTarget}
 
 ## Language
 ${langText(language)}
@@ -215,6 +229,13 @@ export function buildOutlineFromTocPrompt(
         })
         .join("\n");
 
+    const headingRule =
+        options.levels <= 1
+            ? "- Use `##` for each numbered TOC section. Keep everything else as prose/bullets — no deeper headings."
+            : options.levels === 2
+              ? "- Use `##` for each numbered TOC section and `###` for each `x.y` subsection. Do not go deeper than `###`; leaf items become bold sub-points or bullets."
+              : "- Use `##` for each numbered TOC section, `###` for each `x.y` subsection, and `####` (or bold sub-points) for the leaf items inside a subsection.";
+
     return `Write a full law-school OUTLINE in Obsidian markdown, following EXACTLY this table of
 contents, hierarchy, and order:
 
@@ -230,9 +251,7 @@ ${structureText(options)}
 ${langText(language)}
 
 ## Rules
-- Use \`##\` for each numbered TOC section, in the given order.
-- Use \`###\` for each \`x.y\` subsection (and for a doctrine listed directly under a section).
-- Use \`####\` or bold sub-points for the leaf items inside a subsection.
+${headingRule}
 - ONLY create [[wikilinks]] to case/concept/statute names that appear in the Data. Never invent links.
 - Canonical citations: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1". A wikilink holds ONLY the provision number.
 - Blank line after every heading and between a list and the next paragraph.
