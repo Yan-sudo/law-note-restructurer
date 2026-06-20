@@ -13,7 +13,7 @@ import { generateFlashcardsMarkdown, generateAnkiExport } from "../generators/fl
 import { computeRelatedConcepts, renderRelatedSection, type RelatedConcept } from "./semantic-links";
 import { generateOutlinePage } from "../generators/outline-generator";
 import { withPreservedNotes } from "../utils/user-notes";
-import type { EntityDiff } from "./entity-diff";
+import { affectedConceptNames, type EntityDiff } from "./entity-diff";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
     ExtractedEntities,
@@ -232,9 +232,22 @@ export async function runStep4(
         await ensureFolderExists(app.vault, `${outputFolder}/Cases`);
         await ensureFolderExists(app.vault, `${outputFolder}/Dashboards`);
 
+        // Surgical generation: only AI-regenerate concept pages that changed (or
+        // are linked to a changed case). On a first full run the diff covers
+        // every concept, so this is a no-op then.
+        const affected = diff ? affectedConceptNames(diff, entities, matrix) : null;
+        const conceptsToGenerate = affected
+            ? entities.concepts.filter((c) => affected.has(c.name))
+            : entities.concepts;
+        if (affected && conceptsToGenerate.length < entities.concepts.length) {
+            new Notice(
+                `Regenerating ${conceptsToGenerate.length} of ${entities.concepts.length} concept pages (changed only). (仅重生成改动的页)`
+            );
+        }
+
         // Total: concepts (incl. dashboards) + cases + matrix + outline
         const totalSteps =
-            entities.concepts.length +
+            conceptsToGenerate.length +
             entities.cases.length +
             2; // matrix + outline
         let completedSteps = 0;
@@ -283,11 +296,11 @@ export async function runStep4(
 
         // 2. Generate concept + dashboard pages in parallel (AI-powered, combined prompt)
         progressModal.setStep(
-            `Step 4/4: Generating concept & dashboard pages (0/${entities.concepts.length})...`
+            `Step 4/4: Generating concept & dashboard pages (0/${conceptsToGenerate.length})...`
         );
 
         const { errors: conceptErrors } = await parallelMap<LegalConcept, void>(
-            entities.concepts,
+            conceptsToGenerate,
             async (concept) => {
                 const { conceptPage, dashboardPage } = await generateCombinedPage(
                     client,
@@ -350,7 +363,7 @@ export async function runStep4(
 
         // Collect failure names for summary
         for (const { index, error } of conceptErrors) {
-            const name = entities.concepts[index].name;
+            const name = conceptsToGenerate[index].name;
             console.warn(`[law-restructurer] Failed: ${name}`, error.message);
             failedPages.push(name);
         }

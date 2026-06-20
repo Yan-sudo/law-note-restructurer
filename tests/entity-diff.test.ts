@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { diffEntities, diffIsEmpty } from "../src/pipeline/entity-diff";
-import type { LegalCase, LegalConcept } from "../src/types";
+import { diffEntities, diffIsEmpty, affectedConceptNames, emptyDiff } from "../src/pipeline/entity-diff";
+import type { ExtractedEntities, LegalCase, LegalConcept, RelationshipMatrix } from "../src/types";
 
 function concept(name: string, definition: string): LegalConcept {
     return { id: name, name, definition, category: "doctrine", sourceReferences: [] };
@@ -28,5 +28,33 @@ describe("diffEntities", () => {
     it("reports an empty diff when nothing changed", () => {
         const same = { concepts: [concept("X", "d")], cases: [] as LegalCase[] };
         expect(diffIsEmpty(diffEntities(same, same))).toBe(true);
+    });
+});
+
+describe("affectedConceptNames", () => {
+    function entities(): ExtractedEntities {
+        return {
+            concepts: [concept("Y", "d"), concept("Z", "d")],
+            cases: [legalCase("CaseX", "h")],
+            principles: [],
+            rules: [],
+            metadata: { sourceDocuments: [], extractionTimestamp: new Date(0).toISOString(), modelUsed: "t", totalTokensUsed: 0 },
+        };
+    }
+    const matrix: RelationshipMatrix = {
+        entries: [{ caseId: "CaseX", conceptId: "Y", relationshipType: "applies", description: "d", strength: "primary" }],
+        casesInOrder: ["CaseX"],
+        conceptsInOrder: ["Y", "Z"],
+    };
+
+    it("includes a concept linked to a changed case, but not unrelated concepts", () => {
+        const names = affectedConceptNames({ ...emptyDiff(), updatedCases: ["CaseX"] }, entities(), matrix);
+        expect(names.has("Y")).toBe(true);
+        expect(names.has("Z")).toBe(false);
+    });
+
+    it("includes directly changed concepts", () => {
+        const names = affectedConceptNames({ ...emptyDiff(), addedConcepts: ["Z"] }, entities(), matrix);
+        expect(names.has("Z")).toBe(true);
     });
 });
