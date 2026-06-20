@@ -2,10 +2,11 @@ import type { Vault } from "obsidian";
 import type { LLMClient } from "../ai/llm-provider";
 import type { Embedder } from "../ai/embedder";
 import {
-    buildRagPrompt,
+    buildPrompt,
     chunkMarkdown,
     rankBySimilarity,
     uniqueSources,
+    type AskMode,
     type ChatTurn,
     type ChunkEmbedding,
 } from "./rag-core";
@@ -119,6 +120,7 @@ export async function answerQuestion(
     index: RagIndex,
     question: string,
     history: ChatTurn[] = [],
+    mode: AskMode = "qa",
     topK = 6
 ): Promise<RagAnswer> {
     const chunks = allChunks(index);
@@ -138,9 +140,9 @@ export async function answerQuestion(
     const contexts = ranked.map((r) => chunks[r.index]);
 
     if (contexts.length === 0) {
-        return { answer: "No relevant notes found for that question.", sources: [] };
+        return { answer: "No relevant notes found in this folder for that topic.", sources: [] };
     }
 
-    const answer = await generator.generate(buildRagPrompt(question, contexts, history));
+    const answer = await generator.generate(buildPrompt(mode, question, contexts, history));
     return { answer, sources: uniqueSources(contexts) };
 }

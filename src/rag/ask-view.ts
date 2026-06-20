@@ -1,6 +1,14 @@
 import { ItemView, MarkdownRenderer, TFolder, WorkspaceLeaf, setIcon } from "obsidian";
 import type LawNoteRestructurerPlugin from "../main";
-import type { ChatTurn } from "./rag-core";
+import type { AskMode, ChatTurn } from "./rag-core";
+
+const MODES: { value: AskMode; label: string; placeholder: string }[] = [
+    { value: "qa", label: "Q&A", placeholder: "Ask about your notes…  (⌘/Ctrl+Enter)" },
+    { value: "irac", label: "IRAC analysis", placeholder: "Paste a fact pattern to analyze in IRAC…" },
+    { value: "practice", label: "Practice", placeholder: "Topic to be quizzed on (hypothetical + model answer)…" },
+    { value: "socratic", label: "Socratic", placeholder: "Topic — the professor will cold-call you…" },
+    { value: "compare", label: "US ↔ China", placeholder: "Concept to compare across US & Chinese law…" },
+];
 
 export const ASK_VIEW_TYPE = "law-note-ask-view";
 
@@ -97,10 +105,15 @@ export class AskView extends ItemView {
             void this.renderHistory();
         });
 
-        // Folder scope
-        const scope = c.createDiv({ cls: "lnr-ask-scope" });
-        scope.createEl("span", { cls: "lnr-ask-scope-label", text: "Folder" });
-        const select = scope.createEl("select", { cls: "dropdown" });
+        // Mode + folder scope
+        const controls = c.createDiv({ cls: "lnr-ask-scope" });
+        const modeSelect = controls.createEl("select", { cls: "dropdown" });
+        for (const m of MODES) {
+            const opt = modeSelect.createEl("option", { text: m.label });
+            opt.value = m.value;
+        }
+
+        const select = controls.createEl("select", { cls: "dropdown" });
         for (const o of this.scopeOptions()) {
             const opt = select.createEl("option", { text: o.label });
             opt.value = o.value;
@@ -120,7 +133,10 @@ export class AskView extends ItemView {
         const inputRow = c.createDiv({ cls: "lnr-ask-input-row" });
         const input = inputRow.createEl("textarea", {
             cls: "lnr-ask-input",
-            attr: { rows: "2", placeholder: "Ask about your notes…  (⌘/Ctrl+Enter)" },
+            attr: { rows: "2", placeholder: MODES[0].placeholder },
+        });
+        modeSelect.addEventListener("change", () => {
+            input.placeholder = MODES.find((m) => m.value === modeSelect.value)?.placeholder ?? "";
         });
         const sendBtn = inputRow.createEl("button", {
             cls: "mod-cta lnr-send-btn",
@@ -145,7 +161,7 @@ export class AskView extends ItemView {
             this.scrollToBottom();
 
             try {
-                const turn = await this.plugin.askQuestion(question);
+                const turn = await this.plugin.askQuestion(question, modeSelect.value as AskMode);
                 typing.remove();
                 await this.addAssistantBubble(turn);
             } catch (error) {

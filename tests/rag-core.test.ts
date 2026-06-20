@@ -4,6 +4,7 @@ import {
     chunkMarkdown,
     rankBySimilarity,
     buildRagPrompt,
+    buildPrompt,
     uniqueSources,
     type IndexedChunk,
 } from "../src/rag/rag-core";
@@ -64,5 +65,15 @@ describe("buildRagPrompt / uniqueSources", () => {
         ]);
         expect(prompt).toContain("Conversation so far");
         expect(prompt).toContain("What is promissory estoppel?");
+    });
+
+    it("switches framing by mode", () => {
+        const irac = buildPrompt("irac", "Facts: A promised B…", contexts);
+        expect(irac).toContain("IRAC");
+        expect(irac).toContain("# Fact pattern");
+
+        const compare = buildPrompt("compare", "consideration", contexts);
+        expect(compare).toContain("United States");
+        expect(compare).toContain("China");
     });
 });

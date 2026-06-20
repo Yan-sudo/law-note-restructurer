@@ -134,7 +134,7 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程 |
 | **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体 |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 解析未解析链接 |
-| **Ask My Notes** | Docked right-sidebar chat panel (also a ribbon icon): a **folder scope** selector (only index/query the chosen course folder), **multi-turn chat history**, incremental index, and `[[source]]` links / 右侧常驻聊天面板：可选**文件夹范围**（只索引选中课程）、**多轮对话历史**、增量索引、来源链接 |
+| **Ask My Notes** | Docked right-sidebar chat panel with **modes**: Q&A · **IRAC analysis** (paste a fact pattern) · **Practice** (hypothetical + model answer) · **Socratic** (it cold-calls you) · **US ↔ China** comparison. Plus folder scope, multi-turn history, incremental index, `[[source]]` links / 右侧聊天面板，含模式：问答 · IRAC 分析 · 练习 · 苏格拉底 · 中美对照；可选文件夹范围、多轮历史、增量索引、来源链接 |
 | **Rebuild Notes Index** | Force a full re-embed from scratch (rarely needed) / 强制从头重建索引（一般用不到） |
 
 > *Ask My Notes* and *Semantic Related Links* are lightweight, zero-config built-ins. If you want a more powerful, fully local semantic experience, use [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) on the generated vault instead.
@@ -173,6 +173,7 @@ LawNotes/Generated/
 │   ├── Relationship Matrix.md    ← case × concept grid / 关系矩阵
 │   ├── Doctrinal Evolution.md    ← how doctrines evolved (chrono + Mermaid) / 学说演进
 │   ├── Case Synthesis.md         ← multi-case comparison tables / 案例综合表
+│   ├── Authority Check.md        ← doctrines limited/overruled by later cases / 效力校验（迷你 Shepard's）
 │   ├── Flashcards.md             ← Spaced Repetition cards / 闪卡
 │   ├── Flashcards (Anki).txt     ← Anki import file / Anki 导入文件
 │   ├── Outline.md                ← study outline / 学习大纲

@@ -6,7 +6,7 @@ import { runLinkResolver } from "./link-resolver/resolver-orchestrator";
 import { createLLMClient } from "./ai/llm-client-factory";
 import { createEmbedder, embedderSignature } from "./ai/embedder";
 import { AskView, ASK_VIEW_TYPE } from "./rag/ask-view";
-import type { ChatTurn } from "./rag/rag-core";
+import type { AskMode, ChatTurn } from "./rag/rag-core";
 import {
     answerQuestion,
     buildIndex,
@@ -99,7 +99,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
      * (unchanged files keep their embeddings), scoped to the chosen folder, and
      * the answer is appended to the conversation history.
      */
-    async askQuestion(question: string): Promise<ChatTurn> {
+    async askQuestion(question: string, mode: AskMode = "qa"): Promise<ChatTurn> {
         if (!this.settings.geminiApiKey) {
             throw new Error("Set your Gemini API key in Settings first.");
         }
@@ -126,7 +126,8 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             embedder,
             this.ragIndex,
             question,
-            this.chatHistory
+            this.chatHistory,
+            mode
         );
         const turn: ChatTurn = { question, answer, sources };
         this.chatHistory.push(turn);

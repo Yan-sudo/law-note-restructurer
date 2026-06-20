@@ -72,9 +72,53 @@ export interface ChatTurn {
     sources?: string[];
 }
 
-/** Build the grounded-answer prompt from the retrieved note chunks. */
-export function buildRagPrompt(
-    question: string,
+/** Ask My Notes interaction modes — each is a different grounded prompt. */
+export type AskMode = "qa" | "irac" | "practice" | "socratic" | "compare";
+
+const MODE_INSTRUCTIONS: Record<AskMode, { intro: string; inputHeading: string }> = {
+    qa: {
+        intro:
+            "You are a legal study assistant. Answer the question using ONLY the notes below. " +
+            "Cite the sources you rely on as [[Source Title]]. If the notes do not contain the " +
+            "answer, say so plainly rather than guessing.",
+        inputHeading: "# Question",
+    },
+    irac: {
+        intro:
+            "You are a legal study assistant. Analyze the fact pattern using ONLY the notes below. " +
+            "Respond in IRAC format with bold headings **Issue**, **Rule**, **Application**, " +
+            "**Conclusion**. Cite authorities as [[Source Title]]. If the notes lack a rule you need, say so.",
+        inputHeading: "# Fact pattern",
+    },
+    practice: {
+        intro:
+            "You are a law professor writing an exam question. Using ONLY the notes below: " +
+            "(1) pose ONE realistic hypothetical that tests the topic, (2) give a model answer in " +
+            "IRAC format, and (3) add a short issue checklist. Cite authorities as [[Source Title]].",
+        inputHeading: "# Topic",
+    },
+    socratic: {
+        intro:
+            "You are a law professor running a Socratic cold-call. Using the notes below, ask the " +
+            "student ONE focused, probing question about the topic and then STOP — do not answer it. " +
+            "On the student's next message, evaluate their answer against the notes and ask a harder " +
+            "follow-up. Cite authorities as [[Source Title]].",
+        inputHeading: "# Topic",
+    },
+    compare: {
+        intro:
+            "You are a comparative-law assistant. Using ONLY the notes below, compare how US and " +
+            "Chinese law treat the topic. Output a markdown table with columns " +
+            "| Dimension | United States | China |, then a short paragraph on the key differences. " +
+            "Cite authorities as [[Source Title]]. If the notes cover only one jurisdiction, say so.",
+        inputHeading: "# Topic",
+    },
+};
+
+/** Build a grounded prompt for the given mode from the retrieved note chunks. */
+export function buildPrompt(
+    mode: AskMode,
+    input: string,
     contexts: IndexedChunk[],
     history: ChatTurn[] = []
 ): string {
@@ -82,7 +126,7 @@ export function buildRagPrompt(
         .map((c, i) => `[${i + 1}] (Source: [[${c.title}]])\n${c.text}`)
         .join("\n\n");
 
-    // Include the last few turns so follow-up questions have context.
+    // Include the last few turns so follow-ups have context.
     const recent = history.slice(-4);
     const convo = recent.length
         ? "# Conversation so far\n" +
@@ -90,17 +134,25 @@ export function buildRagPrompt(
           "\n\n"
         : "";
 
-    return `You are a legal study assistant. Answer the question using ONLY the notes below.
-Cite the sources you rely on as [[Source Title]]. If the notes do not contain the
-answer, say so plainly rather than guessing.
+    const m = MODE_INSTRUCTIONS[mode];
+    return `${m.intro}
 
-${convo}# Question
-${question}
+${convo}${m.inputHeading}
+${input}
 
 # Notes
 ${notes}
 
 # Answer`;
+}
+
+/** Backwards-compatible Q&A prompt. */
+export function buildRagPrompt(
+    question: string,
+    contexts: IndexedChunk[],
+    history: ChatTurn[] = []
+): string {
+    return buildPrompt("qa", question, contexts, history);
 }
 
 /** Distinct source titles across the retrieved chunks, preserving order. */
