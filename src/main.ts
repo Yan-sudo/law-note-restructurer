@@ -4,13 +4,14 @@ import { LawNoteSettingTab } from "./settings";
 import { PipelineOrchestrator } from "./pipeline/pipeline-orchestrator";
 import { runLinkResolver } from "./link-resolver/resolver-orchestrator";
 import { createLLMClient } from "./ai/llm-client-factory";
+import { createEmbedder, embedderSignature } from "./ai/embedder";
 import { AskView, ASK_VIEW_TYPE } from "./rag/ask-view";
+import type { AskMode, ChatTurn } from "./rag/rag-core";
 import {
     answerQuestion,
     buildIndex,
     loadIndex,
     saveIndex,
-    type RagAnswer,
     type RagIndex,
 } from "./rag/rag-index";
 
@@ -18,6 +19,8 @@ export default class LawNoteRestructurerPlugin extends Plugin {
     settings: LawNoteSettings = DEFAULT_SETTINGS;
     private pipeline: PipelineOrchestrator | null = null;
     private ragIndex: RagIndex | null = null;
+    /** In-memory Ask My Notes conversation (survives panel close/reopen). */
+    chatHistory: ChatTurn[] = [];
 
     async onload(): Promise<void> {
         await this.loadSettings();
@@ -64,6 +67,20 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         return `${this.settings.outputFolder}/.rag-index.json`;
     }
 
+    /** Folder whose notes get embedded — the chosen scope, or the whole output folder. */
+    private get ragScopePrefix(): string {
+        return this.settings.ragScopeFolder || this.settings.outputFolder;
+    }
+
+    /** Drop the cached index (e.g. after the folder scope changes). */
+    resetIndexCache(): void {
+        this.ragIndex = null;
+    }
+
+    clearChat(): void {
+        this.chatHistory = [];
+    }
+
     /** Open (or reveal) the Ask My Notes panel in the right sidebar. */
     private async activateAskView(): Promise<void> {
         const { workspace } = this.app;
@@ -79,39 +96,59 @@ export default class LawNoteRestructurerPlugin extends Plugin {
 
     /**
      * Answer a question against the notes. The index is refreshed incrementally
-     * first (unchanged files keep their embeddings), then queried.
+     * (unchanged files keep their embeddings), scoped to the chosen folder, and
+     * the answer is appended to the conversation history.
      */
-    async askQuestion(question: string): Promise<RagAnswer> {
+    async askQuestion(question: string, mode: AskMode = "qa"): Promise<ChatTurn> {
         if (!this.settings.geminiApiKey) {
             throw new Error("Set your Gemini API key in Settings first.");
         }
         const client = createLLMClient(this.settings);
+        const embedder = createEmbedder(this.settings);
+        const signature = embedderSignature(this.settings);
+
         if (!this.ragIndex) {
             this.ragIndex = await loadIndex(this.app.vault, this.ragIndexPath);
         }
+        // Incremental build scoped to the chosen folder: reuses matching files'
+        // embeddings, embeds only new/changed ones, drops out-of-scope files.
         this.ragIndex = await buildIndex(
             this.app.vault,
-            client,
-            this.settings.outputFolder,
+            embedder,
+            this.ragScopePrefix,
+            signature,
             this.ragIndex ?? undefined
         );
         await saveIndex(this.app.vault, this.ragIndexPath, this.ragIndex);
-        return answerQuestion(client, this.ragIndex, question);
+
+        const { answer, sources } = await answerQuestion(
+            client,
+            embedder,
+            this.ragIndex,
+            question,
+            this.chatHistory,
+            mode
+        );
+        const turn: ChatTurn = { question, answer, sources };
+        this.chatHistory.push(turn);
+        return turn;
     }
 
     private async rebuildNotesIndex(): Promise<void> {
-        if (!this.settings.geminiApiKey) {
+        // Rebuild only embeds, so the Gemini key is required only for that provider.
+        if (this.settings.embeddingProvider === "gemini" && !this.settings.geminiApiKey) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
-        const client = createLLMClient(this.settings);
+        const embedder = createEmbedder(this.settings);
         new Notice("Rebuilding notes index… (重建索引中)");
         try {
             // Pass null to force a full rebuild rather than an incremental update.
             this.ragIndex = await buildIndex(
                 this.app.vault,
-                client,
-                this.settings.outputFolder,
+                embedder,
+                this.ragScopePrefix,
+                embedderSignature(this.settings),
                 null
             );
             await saveIndex(this.app.vault, this.ragIndexPath, this.ragIndex);

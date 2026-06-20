@@ -1,11 +1,13 @@
 import { App, Notice, TFile, Vault } from "obsidian";
 import { createLLMClient } from "../ai/llm-client-factory";
+import { createEmbedder } from "../ai/embedder";
 import {
     generateCombinedPage,
     generateCasePageLocal,
 } from "../generators/concept-page-generator";
 import { generateMatrixPage } from "../generators/matrix-generator";
 import { generateEvolutionPage, generateSynthesisPage } from "../generators/study-aids-generator";
+import { generateAuthorityCheckPage } from "../generators/authority-check-generator";
 import { generateFlashcardsMarkdown, generateAnkiExport } from "../generators/flashcards-generator";
 import { computeRelatedConcepts, renderRelatedSection, type RelatedConcept } from "./semantic-links";
 import { generateOutlinePage } from "../generators/outline-generator";
@@ -264,7 +266,7 @@ export async function runStep4(
             try {
                 relatedMap = await computeRelatedConcepts(
                     entities.concepts,
-                    client,
+                    createEmbedder(settings),
                     settings.semanticLinkThreshold,
                     5
                 );
@@ -391,6 +393,10 @@ export async function runStep4(
         const synthesisPath = `${outputFolder}/Case Synthesis.md`;
         await createOrOverwrite(app.vault, synthesisPath, generateSynthesisPage(matrix, entities));
         generatedFiles.push(synthesisPath);
+
+        const authorityPath = `${outputFolder}/Authority Check.md`;
+        await createOrOverwrite(app.vault, authorityPath, generateAuthorityCheckPage(matrix, entities));
+        generatedFiles.push(authorityPath);
 
         // 4c. Flashcards (Spaced Repetition + Anki), local, opt-out via settings
         if (settings.enableFlashcards) {

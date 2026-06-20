@@ -1,5 +1,6 @@
 import { App, Notice } from "obsidian";
 import { createLLMClient } from "../ai/llm-client-factory";
+import { createEmbedder } from "../ai/embedder";
 import type { LLMClient } from "../ai/llm-provider";
 import { buildEntityExtractionPrompt } from "../ai/prompts";
 import { ExtractedEntitiesSchema } from "../ai/schemas";
@@ -109,7 +110,7 @@ export async function runStep2(
         try {
             const { entities: deduped, mergedCount } = await semanticDeduplicateConcepts(
                 entities,
-                client,
+                createEmbedder(settings),
                 settings.semanticDedupThreshold
             );
             entities = deduped;
