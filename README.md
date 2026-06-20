@@ -134,6 +134,7 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 |---|---|
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程 |
 | **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体 |
+| **Update Knowledge Base** | One click: auto-detects new/changed class notes (by mtime), processes only those, merges, regenerates affected pages, refreshes the What's New graph — no file picking / 一键增量：自动检测新增/改动的课堂笔记，只处理这些并合并更新，刷新变更图，无需选文件 |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 解析未解析链接 |
 | **Ask My Notes** | Docked right-sidebar chat panel with **modes**: Q&A · **IRAC analysis** (paste a fact pattern) · **Practice** (hypothetical + model answer) · **Socratic** (it cold-calls you) · **US ↔ China** comparison. Plus folder scope, multi-turn history, incremental index, `[[source]]` links / 右侧聊天面板，含模式：问答 · IRAC 分析 · 练习 · 苏格拉底 · 中美对照；可选文件夹范围、多轮历史、增量索引、来源链接 |
 | **Rebuild Notes Index** | Force a full re-embed from scratch (rarely needed) / 强制从头重建索引（一般用不到） |

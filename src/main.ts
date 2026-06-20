@@ -45,6 +45,12 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         });
 
         this.addCommand({
+            id: "update-knowledge-base",
+            name: "Update Knowledge Base (增量更新)",
+            callback: () => this.startIncrementalUpdate(),
+        });
+
+        this.addCommand({
             id: "resolve-unresolved-links",
             name: "Resolve Unresolved Links (解析未解析链接)",
             callback: () => runLinkResolver(this.app, this.settings),
@@ -175,6 +181,15 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         }
         this.pipeline = new PipelineOrchestrator(this.app, this.settings);
         this.pipeline.start(stopAfter);
+    }
+
+    private startIncrementalUpdate(): void {
+        if (!this.settings.geminiApiKey) {
+            new Notice("Please set your Gemini API key in Settings first.");
+            return;
+        }
+        this.pipeline = new PipelineOrchestrator(this.app, this.settings);
+        this.pipeline.startIncremental();
     }
 
     async loadSettings(): Promise<void> {
