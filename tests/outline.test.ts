@@ -5,6 +5,7 @@ import {
     structureText,
     buildTocPrompt,
     buildOutlineFromTocPrompt,
+    buildHeadingRule,
     DEFAULT_OUTLINE_OPTIONS,
     type Toc,
     type TocSection,
@@ -99,6 +100,19 @@ describe("prompts", () => {
         );
         expect(p).toContain("about 8 top-level sections");
         expect(p).toContain("Keep it FLAT");
+    });
+
+    it("buildHeadingRule scales depth and caps at h6", () => {
+        expect(buildHeadingRule(1)).toContain("no deeper headings");
+        expect(buildHeadingRule(3)).toContain("####");
+        // h2..h6 = 5 heading levels; level 5 reaches ######.
+        expect(buildHeadingRule(5)).toContain("######");
+        // Beyond 5, real headings cap at h6 and deeper nesting uses lists.
+        const deep = buildHeadingRule(7);
+        expect(deep).toContain("######");
+        expect(deep).toContain("bold lead-ins");
+        // Auto goes as deep as needed.
+        expect(buildHeadingRule(0)).toMatch(/as deep as the material/i);
     });
 
     it("outline heading rule deepens with levels", () => {

@@ -171,7 +171,7 @@ export function buildTocPrompt(
     options: OutlineOptions,
     language: "zh" | "en" | "mixed"
 ): string {
-    const flat = options.levels <= 1 || options.detail === "concise";
+    const flat = options.levels === 1 || options.detail === "concise";
     const nesting = flat
         ? "Keep it FLAT: each section just lists its item labels in `items`; leave `subsections` empty."
         : "Use a TWO-LEVEL hierarchy: break each large section into a few `subsections`, each with its own title and 2–6 item labels. Put a doctrine directly in the section's `items` only when it doesn't belong under any subsection.";
@@ -210,6 +210,30 @@ ${langText(language)}
 ${entityNames(entities)}`;
 }
 
+/**
+ * Heading-depth instruction for the generated outline. Sections start at `##`
+ * (h2 — `#` is the page title), and Markdown only has headings down to `######`
+ * (h6), so deeper levels are rendered as bold lead-ins + nested bullet lists.
+ * `levels <= 0` means "Auto": go as deep as the material naturally needs.
+ */
+export function buildHeadingRule(levels: number): string {
+    const auto = levels <= 0;
+    const deepest = auto ? 6 : Math.min(2 + levels - 1, 6); // markdown caps at h6
+    const deepestMarker = "#".repeat(deepest);
+    const needLists = auto || 2 + levels - 1 > 6;
+    const listClause = needLists
+        ? " For anything deeper than `######`, switch to **bold lead-ins** with nested bullet lists (Markdown has no deeper headings)."
+        : "";
+
+    if (auto) {
+        return `- Use \`##\` for each numbered TOC section and \`###\` for each \`x.y\` subsection, then nest deeper headings (\`####\`, \`#####\`, \`######\`) as deep as the material naturally needs.${listClause}`;
+    }
+    if (deepest <= 2) {
+        return "- Use only `##` for each numbered TOC section. Keep all finer points as bullets/bold — no deeper headings.";
+    }
+    return `- Use \`##\` for each numbered TOC section, \`###\` for each \`x.y\` subsection, and nest deeper headings as needed down to \`${deepestMarker}\` (max heading depth = ${levels} level${levels === 1 ? "" : "s"}).${listClause}`;
+}
+
 export function buildOutlineFromTocPrompt(
     entities: ExtractedEntities,
     toc: Toc,
@@ -229,12 +253,7 @@ export function buildOutlineFromTocPrompt(
         })
         .join("\n");
 
-    const headingRule =
-        options.levels <= 1
-            ? "- Use `##` for each numbered TOC section. Keep everything else as prose/bullets — no deeper headings."
-            : options.levels === 2
-              ? "- Use `##` for each numbered TOC section and `###` for each `x.y` subsection. Do not go deeper than `###`; leaf items become bold sub-points or bullets."
-              : "- Use `##` for each numbered TOC section, `###` for each `x.y` subsection, and `####` (or bold sub-points) for the leaf items inside a subsection.";
+    const headingRule = buildHeadingRule(options.levels);
 
     return `Write a full law-school OUTLINE in Obsidian markdown, following EXACTLY this table of
 contents, hierarchy, and order:
