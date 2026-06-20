@@ -5,10 +5,15 @@ import {
     chunkMarkdown,
     rankBySimilarity,
     uniqueSources,
+    type ChatTurn,
     type ChunkEmbedding,
 } from "./rag-core";
 
 const EMBED_BATCH = 96;
+/** Small pause between embedding batches to stay under rate limits. */
+const BATCH_PAUSE_MS = 300;
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /** One source file's last-modified time plus its embedded chunks. */
 interface FileEntry {
@@ -74,6 +79,7 @@ export async function buildIndex(
             result[c.path].chunks.push({ ...c, embedding: embeddings[j] ?? [] })
         );
         onProgress?.(Math.min(i + EMBED_BATCH, pending.length), pending.length);
+        if (i + EMBED_BATCH < pending.length) await sleep(BATCH_PAUSE_MS);
     }
 
     return { builtAt: new Date().toISOString(), files: result };
@@ -101,6 +107,7 @@ export async function answerQuestion(
     client: LLMClient,
     index: RagIndex,
     question: string,
+    history: ChatTurn[] = [],
     topK = 6
 ): Promise<RagAnswer> {
     const chunks = allChunks(index);
@@ -123,6 +130,6 @@ export async function answerQuestion(
         return { answer: "No relevant notes found for that question.", sources: [] };
     }
 
-    const answer = await client.generate(buildRagPrompt(question, contexts));
+    const answer = await client.generate(buildRagPrompt(question, contexts, history));
     return { answer, sources: uniqueSources(contexts) };
 }

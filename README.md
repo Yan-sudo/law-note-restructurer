@@ -133,7 +133,7 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程 |
 | **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体 |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 解析未解析链接 |
-| **Ask My Notes** | Opens a docked right-sidebar panel (also a ribbon icon). The index updates incrementally on each question — unchanged notes keep their embeddings / 打开右侧常驻面板（也有 ribbon 图标）；每次提问索引按改动增量更新 |
+| **Ask My Notes** | Docked right-sidebar chat panel (also a ribbon icon): a **folder scope** selector (only index/query the chosen course folder), **multi-turn chat history**, incremental index, and `[[source]]` links / 右侧常驻聊天面板：可选**文件夹范围**（只索引选中课程）、**多轮对话历史**、增量索引、来源链接 |
 | **Rebuild Notes Index** | Force a full re-embed from scratch (rarely needed) / 强制从头重建索引（一般用不到） |
 
 > *Ask My Notes* and *Semantic Related Links* are lightweight, zero-config built-ins. If you want a more powerful, fully local semantic experience, use [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) on the generated vault instead.

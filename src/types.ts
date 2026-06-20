@@ -8,6 +8,8 @@ export interface LawNoteSettings {
     /** Embedding model for semantic features (dedup, related links, Ask My Notes). */
     embeddingModel: string;
     outputFolder: string;
+    /** Sub-folder to scope the Ask My Notes index to (empty = whole output folder). */
+    ragScopeFolder: string;
     language: "zh" | "en" | "mixed";
     temperature: number;
     /**
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     modelName: "gemini-2.5-flash",
     embeddingModel: "gemini-embedding-001",
     outputFolder: "LawNotes/Generated",
+    ragScopeFolder: "",
     language: "mixed",
     temperature: 0.3,
     thinkingBudget: -1,

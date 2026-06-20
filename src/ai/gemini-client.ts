@@ -147,11 +147,49 @@ export class GeminiClient implements LLMClient {
 
     async embedTexts(texts: string[]): Promise<number[][]> {
         if (texts.length === 0) return [];
-        const response = await this.ai.models.embedContent({
-            model: this.settings.embeddingModel || DEFAULT_EMBEDDING_MODEL,
-            contents: texts,
-        });
-        return (response.embeddings ?? []).map((e) => e.values ?? []);
+
+        const maxRetries = 3;
+        let lastError: Error | null = null;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await this.ai.models.embedContent({
+                    model: this.settings.embeddingModel || DEFAULT_EMBEDDING_MODEL,
+                    contents: texts,
+                });
+                return (response.embeddings ?? []).map((e) => e.values ?? []);
+            } catch (error: unknown) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                const msg = lastError.message.toLowerCase();
+
+                const isQuota =
+                    msg.includes("429") ||
+                    msg.includes("rate limit") ||
+                    msg.includes("resource_exhausted") ||
+                    msg.includes("quota");
+                const isServer =
+                    msg.includes("500") || msg.includes("503") || msg.includes("unavailable");
+
+                if ((isQuota || isServer) && attempt < maxRetries) {
+                    const waitMs = Math.pow(2, attempt) * 2000 + Math.random() * 1000;
+                    new Notice(
+                        `Embedding rate-limited. Retrying in ${Math.ceil(waitMs / 1000)}s... (${attempt}/${maxRetries})`
+                    );
+                    await sleep(waitMs);
+                    continue;
+                }
+
+                if (isQuota) {
+                    throw new Error(
+                        "Gemini embedding quota exceeded (429). Wait a bit, scope Ask My Notes " +
+                            "to a smaller folder, or check your plan & billing."
+                    );
+                }
+                throw lastError;
+            }
+        }
+
+        throw lastError ?? new Error("Embedding failed after retries");
     }
 
     abort(): void {

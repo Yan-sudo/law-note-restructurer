@@ -57,4 +57,12 @@ describe("buildRagPrompt / uniqueSources", () => {
     it("dedupes source titles", () => {
         expect(uniqueSources(contexts)).toEqual(["Promissory Estoppel"]);
     });
+
+    it("includes recent conversation history for follow-ups", () => {
+        const prompt = buildRagPrompt("And its exceptions?", contexts, [
+            { question: "What is promissory estoppel?", answer: "A promise relied upon is enforceable." },
+        ]);
+        expect(prompt).toContain("Conversation so far");
+        expect(prompt).toContain("What is promissory estoppel?");
+    });
 });

@@ -65,17 +65,36 @@ export function rankBySimilarity(
     return scored.slice(0, topK).filter((s) => s.score > 0);
 }
 
+/** One turn of conversation, used for multi-turn follow-ups. */
+export interface ChatTurn {
+    question: string;
+    answer: string;
+    sources?: string[];
+}
+
 /** Build the grounded-answer prompt from the retrieved note chunks. */
-export function buildRagPrompt(question: string, contexts: IndexedChunk[]): string {
+export function buildRagPrompt(
+    question: string,
+    contexts: IndexedChunk[],
+    history: ChatTurn[] = []
+): string {
     const notes = contexts
         .map((c, i) => `[${i + 1}] (Source: [[${c.title}]])\n${c.text}`)
         .join("\n\n");
+
+    // Include the last few turns so follow-up questions have context.
+    const recent = history.slice(-4);
+    const convo = recent.length
+        ? "# Conversation so far\n" +
+          recent.map((h) => `User: ${h.question}\nAssistant: ${h.answer}`).join("\n\n") +
+          "\n\n"
+        : "";
 
     return `You are a legal study assistant. Answer the question using ONLY the notes below.
 Cite the sources you rely on as [[Source Title]]. If the notes do not contain the
 answer, say so plainly rather than guessing.
 
-# Question
+${convo}# Question
 ${question}
 
 # Notes
