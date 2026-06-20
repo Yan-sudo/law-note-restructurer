@@ -148,6 +148,7 @@ launchctl setenv OLLAMA_ORIGINS "*"
 | **Restructure Legal Notes** | 完整流程：选文件 → 选课程 → 提取实体 → 审查去重 → 映射关系 → 生成输出 |
 | **Extract Legal Entities Only** | 仅提取实体，不生成页面 |
 | **Update Knowledge Base** | 一键增量：按 mtime 自动检测新增/改动的课堂笔记，只处理这些并合并、重生成受影响页、刷新变更图，无需选文件 |
+| **Build Outline** | 选**详细程度**（精简/标准/详尽）+ **结构方式**（按授课顺序 / 按主题 / **案件生命历程** / 自定义）→ AI 先出目录（TOC）→ **拖拽/编辑**调整顺序 → 再按此顺序生成完整大纲 |
 | **Resolve Unresolved Links** | 查找未解析链接，从法律数据库创建页面 |
 | **Ask My Notes** | 右侧常驻聊天面板，含**模式**：问答 · **IRAC 分析**（粘案情）· **练习**（出题+范例答案）· **苏格拉底**（反过来考你）· **中美对照**。另有文件夹范围、多轮历史、增量索引、来源链接 |
 | **Rebuild Notes Index** | 强制从头重建索引（一般用不到） |

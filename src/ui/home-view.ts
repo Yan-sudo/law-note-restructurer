@@ -57,6 +57,12 @@ export class HomeView extends ItemView {
             run: () => this.plugin.updateKnowledgeBase(),
         });
         this.action(c, {
+            icon: "list-tree",
+            label: "Build outline",
+            desc: "Pick detail + structure, drag-arrange the TOC, then generate",
+            run: () => void this.plugin.buildOutline(),
+        });
+        this.action(c, {
             icon: "link",
             label: "Resolve links",
             desc: "Fetch case/statute text for broken wikilinks",

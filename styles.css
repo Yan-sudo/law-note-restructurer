@@ -754,3 +754,62 @@
     font-size: var(--font-ui-smaller);
     color: var(--text-muted);
 }
+
+/* ============================================
+   Outline builder — drag-to-reorder TOC
+   ============================================ */
+.lnr-toc-list {
+    max-height: 55vh;
+    overflow-y: auto;
+    margin: var(--size-4-2) 0;
+}
+
+.lnr-toc-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-3);
+    padding: var(--size-2-2) var(--size-2-3);
+    margin-bottom: var(--size-2-2);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+}
+
+.lnr-toc-row.is-dragging {
+    opacity: 0.5;
+}
+
+.lnr-toc-handle {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-muted);
+    cursor: grab;
+    flex: 0 0 auto;
+}
+
+.lnr-toc-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.lnr-toc-title {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-normal);
+    font-weight: var(--font-medium);
+    padding: 2px 0;
+}
+
+.lnr-toc-title:focus {
+    outline: none;
+    border-bottom: 1px solid var(--interactive-accent);
+}
+
+.lnr-toc-items {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
