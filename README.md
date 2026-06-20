@@ -103,6 +103,8 @@ Open Settings → Law Note Restructurer:
 | Concurrency | Parallel API calls (1–10) | 5 |
 | Auto-accept review | Skip the review modals and generate immediately (unattended) | Off |
 | Usage so far | Cost meter — cumulative tokens & rough $ estimate, resettable | — |
+| Answer length | Default Ask My Notes verbosity: brief / standard / detailed | Standard |
+| Auto-update database | Background incremental update of a chosen course every 15m/1h/6h/1d | Off |
 | Semantic Dedup | Merge same-meaning concepts via embeddings (extra cost) | Off |
 | Semantic Related Links | Append "Related Concepts" to concept pages via embeddings | Off |
 | Generate Flashcards | Spaced Repetition + Anki export from rules/holdings | On |
@@ -139,12 +141,14 @@ You can run **everything** on-device — extraction, restructuring, outlines, an
 
 ## Quick Start
 
-Click the **⚖️ Law Notes** ribbon icon (left edge) to open the control panel, then:
+Click the **⚖️ Law Notes** ribbon icon (left edge) to open the control panel. It's organised database-first: **① Database → ② Keep updated → ③ Study & tools** (update/study actions unlock once a database exists).
 
-1. **Restructure notes** → pick your class-note files (`.md`/`.docx`) and name the course. The plugin builds the whole knowledge base.
+1. **① Build database** → pick your class-note files (`.md`/`.docx`) and name the course. The plugin builds the whole knowledge base.
 2. **Read & annotate** the generated pages. Anything you write in the **📝 My Notes** zone is kept forever.
-3. **Add more class notes later** → **Update knowledge base**. It auto-detects what's new/changed, processes only that, and writes a **`What's New`** change graph.
-4. **Ask my notes** → chat, or switch modes: **IRAC** (paste a fact pattern), **Practice**, **Socratic**, **US ↔ China**.
+3. **② Update now** (or turn on **Auto-update** in Settings) → auto-detects what's new/changed, processes only that, and writes a **`What's New`** change graph.
+4. **③ Ask my notes** → chat, or switch modes: **IRAC**, **Practice**, **Socratic**, **US ↔ China**; pick answer length (brief/standard/detailed). **Build outline** lets you choose detail, heading levels, and TOC size, then drag-arrange the table of contents.
+
+> ⏳ **Long tasks don't block you:** every long run (build, update, outline, index) shows progress in a **status-bar %** and a **minimizable card** in the side panel — hit **Minimize** and keep working.
 
 > 🔒 **Privacy tip:** set **Embedding Provider = Ollama** for offline, quota-free, on-device embeddings.
 
