@@ -75,42 +75,34 @@ export interface ChatTurn {
 /** Ask My Notes interaction modes — each is a different grounded prompt. */
 export type AskMode = "qa" | "irac" | "practice" | "socratic" | "compare";
 
-const MODE_INSTRUCTIONS: Record<AskMode, { intro: string; inputHeading: string }> = {
-    qa: {
-        intro:
-            "You are a legal study assistant. Answer the question using ONLY the notes below. " +
-            "Cite the sources you rely on as [[Source Title]]. If the notes do not contain the " +
-            "answer, say so plainly rather than guessing.",
-        inputHeading: "# Question",
-    },
+// Shared policy for every mode. Notes-first, but *helpful*: supplement with
+// general legal knowledge (clearly labeled) instead of refusing when the notes
+// are thin — and always answer in the student's language.
+const COMMON_POLICY = `You are a legal study assistant helping a law student.
+
+- Use the student's NOTES below as your primary source, and cite them as [[Source Title]].
+- If the notes don't fully answer, DO still help: add well-established general legal
+  knowledge, but clearly mark those additions as "(general knowledge — not in your notes)".
+  Never reply with only "the notes don't contain the answer" if you can otherwise help.
+- Reply in the SAME LANGUAGE as the user's input (e.g. answer Chinese questions in Chinese).
+- Write clean, direct prose. Do NOT echo note titles or headings verbatim.`;
+
+const MODE_TASK: Record<AskMode, { task: string; inputHeading: string }> = {
+    qa: { task: "Answer the question.", inputHeading: "# Question" },
     irac: {
-        intro:
-            "You are a legal study assistant. Analyze the fact pattern using ONLY the notes below. " +
-            "Respond in IRAC format with bold headings **Issue**, **Rule**, **Application**, " +
-            "**Conclusion**. Cite authorities as [[Source Title]]. If the notes lack a rule you need, say so.",
+        task: "Analyze the fact pattern in IRAC format, with bold headings **Issue**, **Rule**, **Application**, **Conclusion**.",
         inputHeading: "# Fact pattern",
     },
     practice: {
-        intro:
-            "You are a law professor writing an exam question. Using ONLY the notes below: " +
-            "(1) pose ONE realistic hypothetical that tests the topic, (2) give a model answer in " +
-            "IRAC format, and (3) add a short issue checklist. Cite authorities as [[Source Title]].",
+        task: "Pose ONE realistic hypothetical that tests the topic, then give a model answer in IRAC format and a short issue checklist.",
         inputHeading: "# Topic",
     },
     socratic: {
-        intro:
-            "You are a law professor running a Socratic cold-call. Using the notes below, ask the " +
-            "student ONE focused, probing question about the topic and then STOP — do not answer it. " +
-            "On the student's next message, evaluate their answer against the notes and ask a harder " +
-            "follow-up. Cite authorities as [[Source Title]].",
+        task: "Run a Socratic cold-call: ask ONE focused, probing question about the topic and then STOP. On the student's next message, evaluate their answer and ask a harder follow-up.",
         inputHeading: "# Topic",
     },
     compare: {
-        intro:
-            "You are a comparative-law assistant. Using ONLY the notes below, compare how US and " +
-            "Chinese law treat the topic. Output a markdown table with columns " +
-            "| Dimension | United States | China |, then a short paragraph on the key differences. " +
-            "Cite authorities as [[Source Title]]. If the notes cover only one jurisdiction, say so.",
+        task: "Compare how US and Chinese law treat the topic in a markdown table with columns | Dimension | United States | China |, then a short paragraph on the key differences.",
         inputHeading: "# Topic",
     },
 };
@@ -134,8 +126,10 @@ export function buildPrompt(
           "\n\n"
         : "";
 
-    const m = MODE_INSTRUCTIONS[mode];
-    return `${m.intro}
+    const m = MODE_TASK[mode];
+    return `${COMMON_POLICY}
+
+Task: ${m.task}
 
 ${convo}${m.inputHeading}
 ${input}
