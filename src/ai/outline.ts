@@ -76,8 +76,8 @@ export const TocSchema = z.object({
         z.object({
             title: z.string(),
             items: z.array(z.string()),
-            // Tolerate models that omit subsections entirely on flat outlines.
-            subsections: z.array(TocSubsectionSchema).default([]),
+            // Required (the Gemini response schema always emits it; empty = flat section).
+            subsections: z.array(TocSubsectionSchema),
         })
     ),
 });
@@ -132,7 +132,8 @@ export function moveSubsection(
     const sec = sections[sectionIndex];
     if (!sec) return sections;
     const subs = sec.subsections;
-    if (from < 0 || from >= subs.length || to < 0 || to >= subs.length || from === to) return sections;
+    const n = subs.length;
+    if (from < 0 || from >= n || to < 0 || to >= n || from === to) return sections;
     const nextSubs = subs.slice();
     const [moved] = nextSubs.splice(from, 1);
     nextSubs.splice(to, 0, moved);
@@ -167,9 +168,7 @@ export function buildTocPrompt(
     const nesting =
         options.detail === "concise"
             ? "Keep it FLAT: each section just lists its item labels in `items`; leave `subsections` empty."
-            : "Use a TWO-LEVEL hierarchy: break each large section into a few `subsections`, each with " +
-              "its own title and 2–6 item labels. Put a doctrine directly in the section's `items` only " +
-              "when it doesn't belong under any subsection.";
+            : "Use a TWO-LEVEL hierarchy: break each large section into a few `subsections`, each with its own title and 2–6 item labels. Put a doctrine directly in the section's `items` only when it doesn't belong under any subsection.";
 
     return `You are organizing a law-school outline. Propose a hierarchical TABLE OF CONTENTS: a list of
 sections, each with optional sub-sections, where the leaf labels name the doctrines/cases covered.
@@ -208,7 +207,7 @@ export function buildOutlineFromTocPrompt(
         .map((s, i) => {
             const lines = [`${i + 1}. ${s.title}`];
             for (const item of s.items) lines.push(`   - ${item}`);
-            s.subsections.forEach((sub, j) => {
+            (s.subsections ?? []).forEach((sub, j) => {
                 lines.push(`   ${i + 1}.${j + 1} ${sub.title}`);
                 for (const item of sub.items) lines.push(`      - ${item}`);
             });

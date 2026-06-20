@@ -14,7 +14,10 @@ export class TocReorderModal extends Modal {
         this.sections = toc.sections.map((s) => ({
             title: s.title,
             items: [...s.items],
-            subsections: (s.subsections ?? []).map((sub) => ({ title: sub.title, items: [...sub.items] })),
+            subsections: (s.subsections ?? []).map((sub) => ({
+                title: sub.title,
+                items: [...sub.items],
+            })),
         }));
         this.onSubmit = onSubmit;
     }
@@ -105,7 +108,10 @@ export class TocReorderModal extends Modal {
         // Nested sub-sections.
         const subList = this.listEl.createDiv({ cls: "lnr-toc-sublist" });
         sec.subsections.forEach((sub, j) => this.renderSubsection(subList, i, j));
-        const addSub = subList.createEl("button", { cls: "lnr-toc-add-sub", text: "+ Add sub-section" });
+        const addSub = subList.createEl("button", {
+            cls: "lnr-toc-add-sub",
+            text: "+ Add sub-section",
+        });
         addSub.addEventListener("click", () => {
             sec.subsections.push({ title: "New sub-section", items: [] });
             this.render();
@@ -147,7 +153,10 @@ export class TocReorderModal extends Modal {
         label: string,
         onClick: () => void
     ): void {
-        const btn = parent.createEl("button", { cls: "clickable-icon", attr: { "aria-label": label } });
+        const btn = parent.createEl("button", {
+            cls: "clickable-icon",
+            attr: { "aria-label": label },
+        });
         setIcon(btn, icon);
         btn.addEventListener("click", onClick);
     }

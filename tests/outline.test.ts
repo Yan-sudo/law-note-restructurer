@@ -41,15 +41,24 @@ describe("moveSection", () => {
 
 describe("moveSubsection", () => {
     const withSubs = (): TocSection[] => [
-        { title: "S", items: [], subsections: [{ title: "a", items: [] }, { title: "b", items: [] }, { title: "c", items: [] }] },
+        {
+            title: "S",
+            items: [],
+            subsections: [
+                { title: "a", items: [] },
+                { title: "b", items: [] },
+                { title: "c", items: [] },
+            ],
+        },
     ];
     it("reorders a subsection within its section", () => {
         const out = moveSubsection(withSubs(), 0, 0, 2);
         expect(out[0].subsections.map((s) => s.title)).toEqual(["b", "c", "a"]);
     });
     it("is a no-op for a bad section or sub index", () => {
-        expect(moveSubsection(withSubs(), 9, 0, 1)[0].subsections.map((s) => s.title)).toEqual(["a", "b", "c"]);
-        expect(moveSubsection(withSubs(), 0, 0, 0)[0].subsections.map((s) => s.title)).toEqual(["a", "b", "c"]);
+        const titles = (out: TocSection[]) => out[0].subsections.map((s) => s.title);
+        expect(titles(moveSubsection(withSubs(), 9, 0, 1))).toEqual(["a", "b", "c"]);
+        expect(titles(moveSubsection(withSubs(), 0, 0, 0))).toEqual(["a", "b", "c"]);
     });
     it("does not mutate the input", () => {
         const input = withSubs();
