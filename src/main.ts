@@ -118,7 +118,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
      * of contents → user drags/edits it → AI writes the full outline in that order.
      */
     async buildOutline(): Promise<void> {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
@@ -243,7 +243,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
      * the answer is appended to the conversation history.
      */
     async askQuestion(question: string, mode: AskMode = "qa"): Promise<ChatTurn> {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             throw new Error("Set your Gemini API key in Settings first.");
         }
         const client = createLLMClient(this.settings);
@@ -311,8 +311,20 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         }
     }
 
+    /**
+     * True when a Gemini key is required but missing. The key is only needed for
+     * providers that actually call Gemini — a fully-local setup (Ollama for both
+     * generation and embeddings) needs no key at all.
+     */
+    private missingGeminiKey(): boolean {
+        const usesGemini =
+            this.settings.generationProvider === "gemini" ||
+            this.settings.embeddingProvider === "gemini";
+        return usesGemini && !this.settings.geminiApiKey;
+    }
+
     private startPipeline(stopAfter?: string): void {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
@@ -321,7 +333,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
     }
 
     private startIncrementalUpdate(): void {
-        if (!this.settings.geminiApiKey) {
+        if (this.missingGeminiKey()) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }

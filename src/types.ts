@@ -5,6 +5,10 @@
 export interface LawNoteSettings {
     geminiApiKey: string;
     modelName: string;
+    /** Where text generation runs: Gemini cloud, or a local Ollama server. */
+    generationProvider: "gemini" | "ollama";
+    /** Ollama generation model (used when generationProvider = "ollama"). */
+    ollamaModel: string;
     /** Where embeddings run: Gemini cloud, or a local Ollama server (offline, no quota). */
     embeddingProvider: "gemini" | "ollama";
     /** Gemini embedding model (used when embeddingProvider = "gemini"). */
@@ -48,6 +52,8 @@ export interface LawNoteSettings {
 export const DEFAULT_SETTINGS: LawNoteSettings = {
     geminiApiKey: "",
     modelName: "gemini-2.5-flash",
+    generationProvider: "gemini",
+    ollamaModel: "llama3.1",
     embeddingProvider: "gemini",
     embeddingModel: "gemini-embedding-001",
     ollamaUrl: "http://localhost:11434",

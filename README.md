@@ -90,8 +90,9 @@ Open Settings → Law Note Restructurer:
 
 | Setting | Description | Default |
 |---|---|---|
-| Gemini API Key | Your Google Gemini key | — |
-| Model | `gemini-2.5-pro` (best), `flash` (recommended), `flash-lite` (cheapest) | `gemini-2.5-flash` |
+| Gemini API Key | Your Google Gemini key (not needed for a fully-local setup) | — |
+| Generation Provider | `Gemini` (cloud) or **`Ollama` (local — offline, free, no key)** | `Gemini` |
+| Model | Gemini model, or the Ollama model to pull | `gemini-2.5-flash` · `llama3.1` |
 | Embedding Provider | `Gemini` (cloud) or **`Ollama` (local — offline, free, no quota, private)** | `Gemini` |
 | Embedding Model | Gemini model, or the Ollama model to pull | `gemini-embedding-001` · `nomic-embed-text` |
 | Temperature | Lower = more focused. 0.2–0.4 recommended | 0.3 |
@@ -122,7 +123,15 @@ launchctl setenv OLLAMA_ORIGINS "*"
 # Linux / Windows: set the env var OLLAMA_ORIGINS=*  (or app://obsidian.md) before starting Ollama
 ```
 
-> Only **embeddings** go local. Answer *generation* in Ask My Notes still uses Gemini (a fully local generator is on the roadmap).
+### Fully local, no API key (Ollama generation)
+
+You can run **everything** on-device — extraction, restructuring, outlines, and Ask My Notes answers — with no Gemini key and no quota:
+
+1. Install [Ollama](https://ollama.com) and pull a capable model: `ollama pull llama3.1` (or a stronger one like `qwen2.5:14b`).
+2. In **Settings → Generation Provider**, choose **Ollama (local)** and set the model name.
+3. Set **Embedding Provider → Ollama** too (see above) so no step touches the cloud.
+
+> Local generation quality depends on the model you pull — bigger models produce noticeably better notes but run slower. For the best quality on large documents, keep Generation Provider on Gemini and only put **embeddings** local.
 
 ---
 
@@ -212,8 +221,8 @@ Please read this before processing sensitive material.
 - **Your notes are sent to Google.** Extraction, relationship mapping, semantic dedup/links, and Ask My Notes send the selected note text to the Google Gemini API. Do **not** process privileged or confidential client material unless your engagement permits sending it to a third-party AI service.
 - **API key storage.** Your Gemini and CourtListener keys are stored locally and unencrypted in the plugin's `data.json` (standard Obsidian plugin data API). It is git-ignored here, but avoid syncing your vault to untrusted locations.
 - **Link Resolver & external requests.** "Resolve Unresolved Links" sends link text to CourtListener, Justia, Cornell LII, and flk.npc.gov.cn.
-- **Local embeddings (recommended for sensitive material).** Set **Embedding Provider = Ollama** to run all embeddings (semantic dedup, related links, Ask My Notes retrieval) on a local [Ollama](https://ollama.com) server — offline, free, no quota, and your notes never leave the machine. Install Ollama, run `ollama pull nomic-embed-text`, and select it in settings. (Answer *generation* in Ask My Notes still uses Gemini; a fully local generator is on the roadmap via the `LLMClient` abstraction.)
-- **Reducing exposure.** Use local embeddings (above), disable Semantic Dedup/Links, set Thinking Budget to *Disabled*, and prefer Flash models.
+- **Fully local, zero cloud (recommended for sensitive material).** Set both **Generation Provider = Ollama** and **Embedding Provider = Ollama** to run extraction, restructuring, outlines, embeddings, and Ask My Notes answers on a local [Ollama](https://ollama.com) server — offline, free, no key, no quota, and your notes never leave the machine. Install Ollama, run `ollama pull llama3.1` and `ollama pull nomic-embed-text`, and select them in settings.
+- **Reducing exposure.** Go fully local (above), or keep generation on Gemini and just set **Embedding Provider = Ollama**; disable Semantic Dedup/Links, set Thinking Budget to *Disabled*, and prefer Flash models.
 
 ---
 
