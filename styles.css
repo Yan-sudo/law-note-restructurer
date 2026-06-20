@@ -818,3 +818,31 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Nested sub-sections sit indented under their parent section. */
+.lnr-toc-sublist {
+    margin: 0 0 var(--size-4-2) var(--size-4-5);
+    border-left: 2px solid var(--background-modifier-border);
+    padding-left: var(--size-2-3);
+}
+
+.lnr-toc-row.lnr-toc-subrow {
+    background: var(--background-primary);
+    margin-top: var(--size-2-2);
+    margin-bottom: 0;
+}
+
+.lnr-toc-subrow .lnr-toc-title {
+    font-weight: var(--font-normal);
+}
+
+.lnr-toc-add-sub {
+    margin-top: var(--size-2-2);
+    font-size: var(--font-ui-smaller);
+    background: transparent;
+    border: 1px dashed var(--background-modifier-border);
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-s);
+    padding: 2px var(--size-2-3);
+}
