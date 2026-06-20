@@ -34,6 +34,7 @@ General note/AI plugins don't understand legal material. This plugin's value is 
 - **Case synthesis** — side-by-side facts/holding comparison tables for multi-case doctrines. / **案例综合**——多案例学说的事实/裁判对比表。
 - **Citation normalization & link resolving** — canonicalizes `IRC § 741` / `Treas. Reg.` / `26 CFR` / `民法典 第三条`, then fetches text from CourtListener, Justia, Cornell LII, and flk.npc.gov.cn. / **引用归一化与链接解析**——统一 `IRC § 741`、`Treas. Reg.`、`26 CFR`、`民法典 第三条` 等格式，再从 CourtListener、Justia、Cornell LII、国家法律法规数据库抓取原文。
 - **Bilingual & multi-jurisdiction** — US + China, Chinese/English/mixed output. / **双语 + 多法域**——美国 + 中国，中/英/混合输出。
+- **Grows with you** — add more class notes anytime; updates merge in incrementally, your `%% lnr:notes %%` **My Notes** zones are never overwritten, and each run writes a **`What's New`** change graph (added = green, updated = orange). / **随你成长**——随时加新笔记，增量合并；你的 **My Notes** 区永不被覆盖；每次更新生成 **`What's New`** 变更图（新增=绿、更新=橙）。
 
 ---
 
@@ -133,6 +134,7 @@ Open the command palette (`Ctrl/Cmd + P`) and search:
 |---|---|
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output / 完整流程 |
 | **Extract Legal Entities Only** | Only extract entities without generating pages / 仅提取实体 |
+| **Update Knowledge Base** | One click: auto-detects new/changed class notes (by mtime), processes only those, merges, regenerates affected pages, refreshes the What's New graph — no file picking / 一键增量：自动检测新增/改动的课堂笔记，只处理这些并合并更新，刷新变更图，无需选文件 |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases / 解析未解析链接 |
 | **Ask My Notes** | Docked right-sidebar chat panel with **modes**: Q&A · **IRAC analysis** (paste a fact pattern) · **Practice** (hypothetical + model answer) · **Socratic** (it cold-calls you) · **US ↔ China** comparison. Plus folder scope, multi-turn history, incremental index, `[[source]]` links / 右侧聊天面板，含模式：问答 · IRAC 分析 · 练习 · 苏格拉底 · 中美对照；可选文件夹范围、多轮历史、增量索引、来源链接 |
 | **Rebuild Notes Index** | Force a full re-embed from scratch (rarely needed) / 强制从头重建索引（一般用不到） |
@@ -174,6 +176,7 @@ LawNotes/Generated/
 │   ├── Doctrinal Evolution.md    ← how doctrines evolved (chrono + Mermaid) / 学说演进
 │   ├── Case Synthesis.md         ← multi-case comparison tables / 案例综合表
 │   ├── Authority Check.md        ← doctrines limited/overruled by later cases / 效力校验（迷你 Shepard's）
+│   ├── What's New.md             ← change graph: what this run added/updated / 本次更新的高亮关系图
 │   ├── Flashcards.md             ← Spaced Repetition cards / 闪卡
 │   ├── Flashcards (Anki).txt     ← Anki import file / Anki 导入文件
 │   ├── Outline.md                ← study outline / 学习大纲

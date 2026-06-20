@@ -1,11 +1,14 @@
 import { TFile, Vault } from "obsidian";
 import type { ExtractedEntities, RelationshipMatrix } from "../types";
+import type { SourceSignature } from "./source-tracking";
 
 export interface PersistedState {
     entities: ExtractedEntities;
     matrix: RelationshipMatrix;
     savedAt: string;
     sourceFiles: string[];
+    /** Path + mtime of every processed source note (enables incremental update). */
+    sources?: SourceSignature[];
 }
 
 const STATE_FILENAME = "_state.json";
@@ -15,13 +18,15 @@ export async function savePipelineState(
     courseFolder: string,
     entities: ExtractedEntities,
     matrix: RelationshipMatrix,
-    sourceFiles: string[]
+    sourceFiles: string[],
+    sources?: SourceSignature[]
 ): Promise<void> {
     const state: PersistedState = {
         entities,
         matrix,
         savedAt: new Date().toISOString(),
         sourceFiles,
+        sources,
     };
 
     const path = `${courseFolder}/${STATE_FILENAME}`;

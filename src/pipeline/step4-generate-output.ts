@@ -8,9 +8,12 @@ import {
 import { generateMatrixPage } from "../generators/matrix-generator";
 import { generateEvolutionPage, generateSynthesisPage } from "../generators/study-aids-generator";
 import { generateAuthorityCheckPage } from "../generators/authority-check-generator";
+import { generateWhatsNewPage } from "../generators/update-log-generator";
 import { generateFlashcardsMarkdown, generateAnkiExport } from "../generators/flashcards-generator";
 import { computeRelatedConcepts, renderRelatedSection, type RelatedConcept } from "./semantic-links";
 import { generateOutlinePage } from "../generators/outline-generator";
+import { withPreservedNotes } from "../utils/user-notes";
+import type { EntityDiff } from "./entity-diff";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
     ExtractedEntities,
@@ -160,7 +163,7 @@ async function createOrUpdateOrAppend(
                     oldContent + "\n\n---\n\n" + wrappedBody;
             }
 
-            await vault.modify(existing, updatedContent);
+            await vault.modify(existing, withPreservedNotes(oldContent, updatedContent));
             return existing;
         }
     }
@@ -173,10 +176,12 @@ async function createOrUpdateOrAppend(
 
     const existingFile = vault.getAbstractFileByPath(path);
     if (existingFile instanceof TFile) {
-        await vault.modify(existingFile, markedContent);
+        // Overwrite, but carry over the user's protected notes zone.
+        const old = await vault.read(existingFile);
+        await vault.modify(existingFile, withPreservedNotes(old, markedContent));
         return existingFile;
     }
-    return vault.create(path, markedContent);
+    return vault.create(path, withPreservedNotes("", markedContent));
 }
 
 // ============================================================
@@ -206,7 +211,8 @@ export async function runStep4(
     entities: ExtractedEntities,
     matrix: RelationshipMatrix,
     outputFolderOverride?: string,
-    courseName?: string
+    courseName?: string,
+    diff?: EntityDiff
 ): Promise<string[]> {
     const client = createLLMClient(settings);
     const outputFolder = outputFolderOverride ?? settings.outputFolder;
@@ -397,6 +403,13 @@ export async function runStep4(
         const authorityPath = `${outputFolder}/Authority Check.md`;
         await createOrOverwrite(app.vault, authorityPath, generateAuthorityCheckPage(matrix, entities));
         generatedFiles.push(authorityPath);
+
+        // 4d. "What's New" change graph (highlights what this run added/updated)
+        if (diff) {
+            const whatsNewPath = `${outputFolder}/What's New.md`;
+            await createOrOverwrite(app.vault, whatsNewPath, generateWhatsNewPage(diff, entities, matrix));
+            generatedFiles.push(whatsNewPath);
+        }
 
         // 4c. Flashcards (Spaced Repetition + Anki), local, opt-out via settings
         if (settings.enableFlashcards) {
