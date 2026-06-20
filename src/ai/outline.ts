@@ -51,22 +51,46 @@ export function structureText(o: OutlineOptions): string {
 // Table of contents
 // ============================================================
 
-export interface TocSection {
+export interface TocSubsection {
     title: string;
     items: string[];
+}
+export interface TocSection {
+    title: string;
+    /** Leaf labels directly under the section (used for flat/concise outlines). */
+    items: string[];
+    /** Nested groups under the section (used for standard/detailed outlines). */
+    subsections: TocSubsection[];
 }
 export interface Toc {
     sections: TocSection[];
 }
+
+const TocSubsectionSchema = z.object({
+    title: z.string(),
+    items: z.array(z.string()),
+});
 
 export const TocSchema = z.object({
     sections: z.array(
         z.object({
             title: z.string(),
             items: z.array(z.string()),
+            // Tolerate models that omit subsections entirely on flat outlines.
+            subsections: z.array(TocSubsectionSchema).default([]),
         })
     ),
 });
+
+const TocSubsectionResponseSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+        title: { type: Type.STRING },
+        items: { type: Type.ARRAY, items: { type: Type.STRING } },
+    },
+    required: ["title", "items"],
+    propertyOrdering: ["title", "items"],
+};
 
 export const TocResponseSchema: Schema = {
     type: Type.OBJECT,
@@ -78,9 +102,10 @@ export const TocResponseSchema: Schema = {
                 properties: {
                     title: { type: Type.STRING },
                     items: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    subsections: { type: Type.ARRAY, items: TocSubsectionResponseSchema },
                 },
-                required: ["title", "items"],
-                propertyOrdering: ["title", "items"],
+                required: ["title", "items", "subsections"],
+                propertyOrdering: ["title", "items", "subsections"],
             },
         },
     },
@@ -95,6 +120,23 @@ export function moveSection(sections: TocSection[], from: number, to: number): T
     const [moved] = copy.splice(from, 1);
     copy.splice(to, 0, moved);
     return copy;
+}
+
+/** Reorder a subsection within one section; returns a new sections array. */
+export function moveSubsection(
+    sections: TocSection[],
+    sectionIndex: number,
+    from: number,
+    to: number
+): TocSection[] {
+    const sec = sections[sectionIndex];
+    if (!sec) return sections;
+    const subs = sec.subsections;
+    if (from < 0 || from >= subs.length || to < 0 || to >= subs.length || from === to) return sections;
+    const nextSubs = subs.slice();
+    const [moved] = nextSubs.splice(from, 1);
+    nextSubs.splice(to, 0, moved);
+    return sections.map((s, i) => (i === sectionIndex ? { ...s, subsections: nextSubs } : s));
 }
 
 // ============================================================
@@ -122,8 +164,15 @@ export function buildTocPrompt(
     options: OutlineOptions,
     language: "zh" | "en" | "mixed"
 ): string {
-    return `You are organizing a law-school outline. Propose a TABLE OF CONTENTS: a list of
-sections, each with a few short item labels naming the doctrines/cases it will cover.
+    const nesting =
+        options.detail === "concise"
+            ? "Keep it FLAT: each section just lists its item labels in `items`; leave `subsections` empty."
+            : "Use a TWO-LEVEL hierarchy: break each large section into a few `subsections`, each with " +
+              "its own title and 2–6 item labels. Put a doctrine directly in the section's `items` only " +
+              "when it doesn't belong under any subsection.";
+
+    return `You are organizing a law-school outline. Propose a hierarchical TABLE OF CONTENTS: a list of
+sections, each with optional sub-sections, where the leaf labels name the doctrines/cases covered.
 
 ## Structure
 ${structureText(options)}
@@ -131,13 +180,18 @@ ${structureText(options)}
 ## Detail
 ${DETAIL_TEXT[options.detail]}
 
+## Nesting
+${nesting}
+
 ## Language
 ${langText(language)}
 
 ## Rules
 - Cover the material below; group it sensibly per the Structure instruction.
-- Each section: a clear title + 2–8 short item labels drawn from the data (doctrine/case names).
-- Order the sections to match the Structure instruction. Return ONLY the structured TOC.
+- Section title = a clear top-level heading. Subsection title = a coherent sub-group within it.
+- Leaf item labels are short and drawn from the data (doctrine/case names) — not full sentences.
+- Order sections (and subsections within them) to match the Structure instruction.
+- Return ONLY the structured TOC.
 
 ## Data
 ${entityNames(entities)}`;
@@ -151,11 +205,19 @@ export function buildOutlineFromTocPrompt(
     today: string
 ): string {
     const tocText = toc.sections
-        .map((s, i) => `${i + 1}. ${s.title}${s.items.length ? `\n   - ${s.items.join("\n   - ")}` : ""}`)
+        .map((s, i) => {
+            const lines = [`${i + 1}. ${s.title}`];
+            for (const item of s.items) lines.push(`   - ${item}`);
+            s.subsections.forEach((sub, j) => {
+                lines.push(`   ${i + 1}.${j + 1} ${sub.title}`);
+                for (const item of sub.items) lines.push(`      - ${item}`);
+            });
+            return lines.join("\n");
+        })
         .join("\n");
 
     return `Write a full law-school OUTLINE in Obsidian markdown, following EXACTLY this table of
-contents and section order:
+contents, hierarchy, and order:
 
 ${tocText}
 
@@ -169,7 +231,9 @@ ${structureText(options)}
 ${langText(language)}
 
 ## Rules
-- Use \`##\` for each TOC section, in the given order; \`###\` for doctrines/sub-rules.
+- Use \`##\` for each numbered TOC section, in the given order.
+- Use \`###\` for each \`x.y\` subsection (and for a doctrine listed directly under a section).
+- Use \`####\` or bold sub-points for the leaf items inside a subsection.
 - ONLY create [[wikilinks]] to case/concept/statute names that appear in the Data. Never invent links.
 - Canonical citations: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1". A wikilink holds ONLY the provision number.
 - Blank line after every heading and between a list and the next paragraph.
