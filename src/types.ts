@@ -5,6 +5,8 @@
 export interface LawNoteSettings {
     geminiApiKey: string;
     modelName: string;
+    /** Embedding model for semantic features (dedup, related links, Ask My Notes). */
+    embeddingModel: string;
     outputFolder: string;
     language: "zh" | "en" | "mixed";
     temperature: number;
@@ -38,6 +40,7 @@ export interface LawNoteSettings {
 export const DEFAULT_SETTINGS: LawNoteSettings = {
     geminiApiKey: "",
     modelName: "gemini-2.5-flash",
+    embeddingModel: "gemini-embedding-001",
     outputFolder: "LawNotes/Generated",
     language: "mixed",
     temperature: 0.3,

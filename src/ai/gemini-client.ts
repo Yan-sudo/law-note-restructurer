@@ -6,7 +6,7 @@ import type { LawNoteSettings } from "../types";
 import type { LLMClient } from "./llm-provider";
 
 const MAX_OUTPUT_TOKENS = 65536;
-const EMBEDDING_MODEL = "text-embedding-004";
+const DEFAULT_EMBEDDING_MODEL = "gemini-embedding-001";
 
 /** Subset of the SDK's usage metadata we care about. */
 interface UsageLike {
@@ -148,7 +148,7 @@ export class GeminiClient implements LLMClient {
     async embedTexts(texts: string[]): Promise<number[][]> {
         if (texts.length === 0) return [];
         const response = await this.ai.models.embedContent({
-            model: EMBEDDING_MODEL,
+            model: this.settings.embeddingModel || DEFAULT_EMBEDDING_MODEL,
             contents: texts,
         });
         return (response.embeddings ?? []).map((e) => e.values ?? []);
