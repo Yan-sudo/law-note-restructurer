@@ -34,6 +34,7 @@ General note/AI plugins don't understand legal material. This plugin's value is 
 - **Case synthesis** — side-by-side facts/holding comparison tables for multi-case doctrines. / **案例综合**——多案例学说的事实/裁判对比表。
 - **Citation normalization & link resolving** — canonicalizes `IRC § 741` / `Treas. Reg.` / `26 CFR` / `民法典 第三条`, then fetches text from CourtListener, Justia, Cornell LII, and flk.npc.gov.cn. / **引用归一化与链接解析**——统一 `IRC § 741`、`Treas. Reg.`、`26 CFR`、`民法典 第三条` 等格式，再从 CourtListener、Justia、Cornell LII、国家法律法规数据库抓取原文。
 - **Bilingual & multi-jurisdiction** — US + China, Chinese/English/mixed output. / **双语 + 多法域**——美国 + 中国，中/英/混合输出。
+- **Grows with you** — add more class notes anytime; updates merge in incrementally, your `%% lnr:notes %%` **My Notes** zones are never overwritten, and each run writes a **`What's New`** change graph (added = green, updated = orange). / **随你成长**——随时加新笔记，增量合并；你的 **My Notes** 区永不被覆盖；每次更新生成 **`What's New`** 变更图（新增=绿、更新=橙）。
 
 ---
 
@@ -174,6 +175,7 @@ LawNotes/Generated/
 │   ├── Doctrinal Evolution.md    ← how doctrines evolved (chrono + Mermaid) / 学说演进
 │   ├── Case Synthesis.md         ← multi-case comparison tables / 案例综合表
 │   ├── Authority Check.md        ← doctrines limited/overruled by later cases / 效力校验（迷你 Shepard's）
+│   ├── What's New.md             ← change graph: what this run added/updated / 本次更新的高亮关系图
 │   ├── Flashcards.md             ← Spaced Repetition cards / 闪卡
 │   ├── Flashcards (Anki).txt     ← Anki import file / Anki 导入文件
 │   ├── Outline.md                ← study outline / 学习大纲

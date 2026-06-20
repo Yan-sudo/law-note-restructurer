@@ -13,6 +13,7 @@ import { runStep4 } from "./step4-generate-output";
 import { CourseSelectModal, type CourseSelection } from "../ui/course-select-modal";
 import { loadPipelineState, savePipelineState } from "./state-persistence";
 import { mergeEntities, deduplicateEntities } from "./entity-merger";
+import { diffEntities } from "./entity-diff";
 import { ensureFolderExists } from "../utils/vault-helpers";
 import { addCrossCourseLinks } from "../utils/cross-course-linker";
 
@@ -95,6 +96,9 @@ export class PipelineOrchestrator {
         // Deduplicate
         entities = deduplicateEntities(entities);
 
+        // What changed vs the previous knowledge base (drives the What's New graph).
+        const diff = diffEntities(existingState?.entities ?? { concepts: [], cases: [] }, entities);
+
         this.state.extractedEntities = entities;
 
         if (stopAfter === "entity-extract") {
@@ -122,7 +126,8 @@ export class PipelineOrchestrator {
             entities,
             matrix,
             effectiveOutputFolder,
-            courseSelection.courseName || undefined
+            courseSelection.courseName || undefined,
+            diff
         );
         this.state.generatedFiles = files;
 
