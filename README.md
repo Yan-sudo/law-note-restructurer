@@ -148,6 +148,7 @@ Click the **⚖️ Law Notes** ribbon icon (left edge) to open the control panel
 | **Restructure Legal Notes** | Full pipeline: select files → pick course → extract entities → review & dedup → map relationships → generate output |
 | **Extract Legal Entities Only** | Only extract entities without generating pages |
 | **Update Knowledge Base** | One click: auto-detects new/changed class notes (by mtime), processes only those, merges, regenerates affected pages, refreshes the What's New graph — no file picking |
+| **Build Outline** | Pick **detail** (concise/standard/detailed) + **structure** (as-taught / thematic / **case lifecycle** / custom) → AI proposes a table of contents → **drag-reorder/edit** it → AI writes the full outline in that order |
 | **Resolve Unresolved Links** | Find broken wikilinks and create pages from legal databases |
 | **Ask My Notes** | Docked right-sidebar chat panel with **modes**: Q&A · **IRAC analysis** (paste a fact pattern) · **Practice** (hypothetical + model answer) · **Socratic** (it cold-calls you) · **US ↔ China** comparison. Plus folder scope, multi-turn history, incremental index, `[[source]]` links |
 | **Rebuild Notes Index** | Force a full re-embed from scratch (rarely needed) |

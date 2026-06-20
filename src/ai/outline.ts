@@ -1,0 +1,185 @@
+import { z } from "zod";
+import { Type, type Schema } from "@google/genai";
+import type { ExtractedEntities } from "../types";
+
+// ============================================================
+// Options
+// ============================================================
+
+export type OutlineDetail = "concise" | "standard" | "detailed";
+export type OutlineStructure = "lecture" | "thematic" | "lifecycle" | "custom";
+
+export interface OutlineOptions {
+    detail: OutlineDetail;
+    structure: OutlineStructure;
+    /** Free-text instruction used when structure === "custom". */
+    customInstruction: string;
+}
+
+export const DEFAULT_OUTLINE_OPTIONS: OutlineOptions = {
+    detail: "standard",
+    structure: "lecture",
+    customInstruction: "",
+};
+
+const DETAIL_TEXT: Record<OutlineDetail, string> = {
+    concise: "High-level: major topics only, short rule statements, minimal sub-points.",
+    standard: "Balanced: doctrines with key elements and landmark cases, moderate depth.",
+    detailed:
+        "Thorough: elements, exceptions, sub-rules, application steps, and supporting cases for each doctrine.",
+};
+
+/** Human-readable structure instruction fed to the model. */
+export function structureText(o: OutlineOptions): string {
+    switch (o.structure) {
+        case "lecture":
+            return "Organize roughly in the order the material is usually taught (as reflected by the source notes).";
+        case "thematic":
+            return "Reorganize by doctrine/theme, grouping related rules together regardless of lecture order.";
+        case "lifecycle":
+            return (
+                "Reorganize chronologically by the real-world lifecycle/sequence of the subject — " +
+                "e.g., for Civil Procedure follow a case's journey: pleadings → motions to dismiss → " +
+                "discovery → summary judgment → trial → post-trial motions → appeal — rather than lecture order."
+            );
+        case "custom":
+            return o.customInstruction.trim() || "Use the most logical structure for the subject.";
+    }
+}
+
+// ============================================================
+// Table of contents
+// ============================================================
+
+export interface TocSection {
+    title: string;
+    items: string[];
+}
+export interface Toc {
+    sections: TocSection[];
+}
+
+export const TocSchema = z.object({
+    sections: z.array(
+        z.object({
+            title: z.string(),
+            items: z.array(z.string()),
+        })
+    ),
+});
+
+export const TocResponseSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+        sections: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    items: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["title", "items"],
+                propertyOrdering: ["title", "items"],
+            },
+        },
+    },
+    required: ["sections"],
+    propertyOrdering: ["sections"],
+};
+
+/** Pure reorder helper used by the drag-and-drop TOC editor. */
+export function moveSection(sections: TocSection[], from: number, to: number): TocSection[] {
+    const copy = sections.slice();
+    if (from < 0 || from >= copy.length || to < 0 || to >= copy.length || from === to) return copy;
+    const [moved] = copy.splice(from, 1);
+    copy.splice(to, 0, moved);
+    return copy;
+}
+
+// ============================================================
+// Prompts
+// ============================================================
+
+function langText(language: "zh" | "en" | "mixed"): string {
+    if (language === "zh") return "请用中文输出，保留英文案例名、法律术语和引用原文。";
+    if (language === "en") return "Output in English.";
+    return "Use Chinese for prose but preserve English case names, citations, and terms of art.";
+}
+
+function entityNames(entities: ExtractedEntities): string {
+    const list = (arr: { name: string }[]) => arr.map((x) => x.name).join(", ");
+    return (
+        `Concepts: ${list(entities.concepts)}\n` +
+        `Cases: ${list(entities.cases)}\n` +
+        `Rules: ${list(entities.rules)}\n` +
+        `Principles: ${list(entities.principles)}`
+    );
+}
+
+export function buildTocPrompt(
+    entities: ExtractedEntities,
+    options: OutlineOptions,
+    language: "zh" | "en" | "mixed"
+): string {
+    return `You are organizing a law-school outline. Propose a TABLE OF CONTENTS: a list of
+sections, each with a few short item labels naming the doctrines/cases it will cover.
+
+## Structure
+${structureText(options)}
+
+## Detail
+${DETAIL_TEXT[options.detail]}
+
+## Language
+${langText(language)}
+
+## Rules
+- Cover the material below; group it sensibly per the Structure instruction.
+- Each section: a clear title + 2–8 short item labels drawn from the data (doctrine/case names).
+- Order the sections to match the Structure instruction. Return ONLY the structured TOC.
+
+## Data
+${entityNames(entities)}`;
+}
+
+export function buildOutlineFromTocPrompt(
+    entities: ExtractedEntities,
+    toc: Toc,
+    options: OutlineOptions,
+    language: "zh" | "en" | "mixed",
+    today: string
+): string {
+    const tocText = toc.sections
+        .map((s, i) => `${i + 1}. ${s.title}${s.items.length ? `\n   - ${s.items.join("\n   - ")}` : ""}`)
+        .join("\n");
+
+    return `Write a full law-school OUTLINE in Obsidian markdown, following EXACTLY this table of
+contents and section order:
+
+${tocText}
+
+## Detail
+${DETAIL_TEXT[options.detail]}
+
+## Structure intent
+${structureText(options)}
+
+## Language
+${langText(language)}
+
+## Rules
+- Use \`##\` for each TOC section, in the given order; \`###\` for doctrines/sub-rules.
+- ONLY create [[wikilinks]] to case/concept/statute names that appear in the Data. Never invent links.
+- Canonical citations: "IRC § 721" (not "I.R.C."), "Treas. Reg. § 1.721-1". A wikilink holds ONLY the provision number.
+- Blank line after every heading and between a list and the next paragraph.
+- Start DIRECTLY with --- frontmatter (tags: law/outline; date: ${today}). No code fences.
+
+## Data
+Concepts: ${JSON.stringify(entities.concepts.map((c) => ({ name: c.name, definition: c.definition })))}
+Cases: ${JSON.stringify(entities.cases.map((c) => ({ name: c.name, year: c.year, holding: c.holding })))}
+Rules: ${JSON.stringify(entities.rules.map((r) => ({ name: r.name, statement: r.statement, elements: r.elements })))}
+Principles: ${JSON.stringify(entities.principles.map((p) => ({ name: p.name, description: p.description })))}
+
+Output raw markdown starting with ---.`;
+}
