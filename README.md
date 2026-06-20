@@ -124,6 +124,21 @@ Open Settings → Law Note Restructurer:
 
 ---
 
+## Quick Start / 快速上手
+
+Click the **⚖️ Law Notes** ribbon icon (left edge) to open the control panel, then:
+
+点左侧 **⚖️ Law Notes** 功能区图标打开控制台，然后：
+
+1. **Restructure notes** → pick your class-note files (`.md`/`.docx`) and name the course. The plugin builds the whole knowledge base. / **Restructure notes** → 选课堂笔记（`.md`/`.docx`）并命名课程，插件构建整个知识库。
+2. **Read & annotate** the generated pages. Anything you write in the **📝 My Notes** zone is kept forever. / **阅读 + 批注**生成的页面；写在 **📝 My Notes** 区里的内容永久保留。
+3. **Add more class notes later** → **Update knowledge base**. It auto-detects what's new/changed, processes only that, and writes a **`What's New`** change graph. / 之后加笔记 → **Update knowledge base**，自动只处理新增/改动并生成变更图。
+4. **Ask my notes** → chat, or switch modes: **IRAC** (paste a fact pattern), **Practice**, **Socratic**, **US ↔ China**. / **Ask my notes** → 问答，或切换模式：IRAC、练习、苏格拉底、中美对照。
+
+> 🔒 **Privacy tip:** set **Embedding Provider = Ollama** for offline, quota-free, on-device embeddings. / 把 **Embedding Provider 设为 Ollama** 即可离线、不限额、数据不出本机。
+
+---
+
 ## Commands / 命令
 
 **No need to memorize commands** — click the **⚖️ Law Notes** ribbon icon (left edge) to open a control panel with a labeled button for every action. Or open the command palette (`Ctrl/Cmd + P`):
@@ -160,6 +175,10 @@ Open Settings → Law Note Restructurer:
 │     └─ Save State        保存状态供下次使用              │
 └─────────────────────────────────────────────────────────┘
 ```
+
+After the first full run, use **Update Knowledge Base** for the day-to-day loop: it skips the file picker, auto-detects new/changed notes (by mtime), and only re-processes those — your edits and links are preserved.
+
+首次完整运行后，日常用 **Update Knowledge Base** 即可：跳过选文件，按 mtime 自动识别新增/改动的笔记，只重处理这些——你的批注和链接都保留。
 
 ---
 
