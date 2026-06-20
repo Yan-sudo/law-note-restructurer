@@ -4,6 +4,7 @@ import { LawNoteSettingTab } from "./settings";
 import { PipelineOrchestrator } from "./pipeline/pipeline-orchestrator";
 import { runLinkResolver } from "./link-resolver/resolver-orchestrator";
 import { createLLMClient } from "./ai/llm-client-factory";
+import { createEmbedder, embedderSignature } from "./ai/embedder";
 import { AskView, ASK_VIEW_TYPE } from "./rag/ask-view";
 import type { ChatTurn } from "./rag/rag-core";
 import {
@@ -103,6 +104,8 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             throw new Error("Set your Gemini API key in Settings first.");
         }
         const client = createLLMClient(this.settings);
+        const embedder = createEmbedder(this.settings);
+        const signature = embedderSignature(this.settings);
 
         if (!this.ragIndex) {
             this.ragIndex = await loadIndex(this.app.vault, this.ragIndexPath);
@@ -111,14 +114,16 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         // embeddings, embeds only new/changed ones, drops out-of-scope files.
         this.ragIndex = await buildIndex(
             this.app.vault,
-            client,
+            embedder,
             this.ragScopePrefix,
+            signature,
             this.ragIndex ?? undefined
         );
         await saveIndex(this.app.vault, this.ragIndexPath, this.ragIndex);
 
         const { answer, sources } = await answerQuestion(
             client,
+            embedder,
             this.ragIndex,
             question,
             this.chatHistory
@@ -129,18 +134,20 @@ export default class LawNoteRestructurerPlugin extends Plugin {
     }
 
     private async rebuildNotesIndex(): Promise<void> {
-        if (!this.settings.geminiApiKey) {
+        // Rebuild only embeds, so the Gemini key is required only for that provider.
+        if (this.settings.embeddingProvider === "gemini" && !this.settings.geminiApiKey) {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
-        const client = createLLMClient(this.settings);
+        const embedder = createEmbedder(this.settings);
         new Notice("Rebuilding notes index… (重建索引中)");
         try {
             // Pass null to force a full rebuild rather than an incremental update.
             this.ragIndex = await buildIndex(
                 this.app.vault,
-                client,
+                embedder,
                 this.ragScopePrefix,
+                embedderSignature(this.settings),
                 null
             );
             await saveIndex(this.app.vault, this.ragIndexPath, this.ragIndex);

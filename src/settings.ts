@@ -45,20 +45,63 @@ export class LawNoteSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName("Embedding Model")
+            .setName("Embedding provider")
             .setDesc(
-                "Model for semantic features (dedup, related links, Ask My Notes). " +
-                "Use 'gemini-embedding-001' (current). Change only if Google retires it."
+                "Where embeddings run (semantic dedup, related links, Ask My Notes). " +
+                "Ollama is local: offline, free, no quota — notes never leave your machine."
             )
-            .addText((text) =>
-                text
-                    .setPlaceholder("gemini-embedding-001")
-                    .setValue(this.plugin.settings.embeddingModel)
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("gemini", "Gemini (cloud)")
+                    .addOption("ollama", "Ollama (local)")
+                    .setValue(this.plugin.settings.embeddingProvider)
                     .onChange(async (value) => {
-                        this.plugin.settings.embeddingModel = value.trim();
+                        this.plugin.settings.embeddingProvider = value as "gemini" | "ollama";
                         await this.plugin.saveSettings();
+                        this.display(); // refresh to show the relevant fields
                     })
             );
+
+        if (this.plugin.settings.embeddingProvider === "gemini") {
+            new Setting(containerEl)
+                .setName("Gemini embedding model")
+                .setDesc("Use 'gemini-embedding-001' (current). Change only if Google retires it.")
+                .addText((text) =>
+                    text
+                        .setPlaceholder("gemini-embedding-001")
+                        .setValue(this.plugin.settings.embeddingModel)
+                        .onChange(async (value) => {
+                            this.plugin.settings.embeddingModel = value.trim();
+                            await this.plugin.saveSettings();
+                        })
+                );
+        } else {
+            new Setting(containerEl)
+                .setName("Ollama URL")
+                .setDesc("Address of your local Ollama server.")
+                .addText((text) =>
+                    text
+                        .setPlaceholder("http://localhost:11434")
+                        .setValue(this.plugin.settings.ollamaUrl)
+                        .onChange(async (value) => {
+                            this.plugin.settings.ollamaUrl = value.trim();
+                            await this.plugin.saveSettings();
+                        })
+                );
+
+            new Setting(containerEl)
+                .setName("Ollama embedding model")
+                .setDesc("Pull it first, e.g. `ollama pull nomic-embed-text`.")
+                .addText((text) =>
+                    text
+                        .setPlaceholder("nomic-embed-text")
+                        .setValue(this.plugin.settings.ollamaEmbeddingModel)
+                        .onChange(async (value) => {
+                            this.plugin.settings.ollamaEmbeddingModel = value.trim();
+                            await this.plugin.saveSettings();
+                        })
+                );
+        }
 
         new Setting(containerEl)
             .setName("Temperature")

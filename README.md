@@ -108,7 +108,8 @@ Open Settings → Law Note Restructurer:
 |---|---|---|
 | Gemini API Key / API 密钥 | Your Google Gemini key / 你的 Gemini 密钥 | — |
 | Model / 模型 | `gemini-2.5-pro` (best), `flash` (recommended), `flash-lite` (cheapest) | `gemini-2.5-flash` |
-| Embedding Model / 嵌入模型 | For semantic dedup, related links, and Ask My Notes / 用于语义去重、相关链接、问答 | `gemini-embedding-001` |
+| Embedding Provider / 嵌入来源 | `Gemini` (cloud) or **`Ollama` (local — offline, free, no quota, private)** / Gemini 云端，或 **Ollama 本地（离线、免费、不限额、隐私）** | `Gemini` |
+| Embedding Model / 嵌入模型 | Gemini model, or the Ollama model to pull / Gemini 模型，或要拉取的 Ollama 模型 | `gemini-embedding-001` · `nomic-embed-text` |
 | Temperature / 温度 | Lower = more focused. 0.2–0.4 recommended / 越低越精确，建议 0.2–0.4 | 0.3 |
 | Thinking Budget / 思考预算 | Gemini 2.5 reasoning effort. Model default recommended; Disabled is cheapest (Flash only) / 推理力度，默认即可，关闭最省（仅 Flash） | Model default |
 | Streaming / 流式输出 | Show real-time AI progress / 实时显示 AI 进度 | On |
@@ -204,7 +205,9 @@ Please read this before processing sensitive material.
 
   **链接解析与外部请求。** “解析未解析链接”会把链接文本发送给上述公开法律数据库。
 
-- **Reducing exposure.** Disable Semantic Dedup/Links, set Thinking Budget to *Disabled*, and prefer Flash models. A fully local LLM provider is on the roadmap (the plugin already talks to an `LLMClient` abstraction, not Gemini directly).
+- **Local embeddings (recommended for sensitive material).** Set **Embedding Provider = Ollama** to run all embeddings (semantic dedup, related links, Ask My Notes retrieval) on a local [Ollama](https://ollama.com) server — offline, free, no quota, and your notes never leave the machine. Install Ollama, run `ollama pull nomic-embed-text`, and select it in settings. (Answer *generation* in Ask My Notes still uses Gemini; a fully local generator is on the roadmap via the `LLMClient` abstraction.)
+
+- **Reducing exposure.** Use local embeddings (above), disable Semantic Dedup/Links, set Thinking Budget to *Disabled*, and prefer Flash models.
 
   **降低暴露。** 关闭语义功能、思考预算设为*关闭*、优先用 Flash 模型。完全本地 LLM 已在规划中（插件已通过 `LLMClient` 抽象层）。
 

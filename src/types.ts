@@ -5,8 +5,14 @@
 export interface LawNoteSettings {
     geminiApiKey: string;
     modelName: string;
-    /** Embedding model for semantic features (dedup, related links, Ask My Notes). */
+    /** Where embeddings run: Gemini cloud, or a local Ollama server (offline, no quota). */
+    embeddingProvider: "gemini" | "ollama";
+    /** Gemini embedding model (used when embeddingProvider = "gemini"). */
     embeddingModel: string;
+    /** Ollama server URL (used when embeddingProvider = "ollama"). */
+    ollamaUrl: string;
+    /** Ollama embedding model (used when embeddingProvider = "ollama"). */
+    ollamaEmbeddingModel: string;
     outputFolder: string;
     /** Sub-folder to scope the Ask My Notes index to (empty = whole output folder). */
     ragScopeFolder: string;
@@ -42,7 +48,10 @@ export interface LawNoteSettings {
 export const DEFAULT_SETTINGS: LawNoteSettings = {
     geminiApiKey: "",
     modelName: "gemini-2.5-flash",
+    embeddingProvider: "gemini",
     embeddingModel: "gemini-embedding-001",
+    ollamaUrl: "http://localhost:11434",
+    ollamaEmbeddingModel: "nomic-embed-text",
     outputFolder: "LawNotes/Generated",
     ragScopeFolder: "",
     language: "mixed",

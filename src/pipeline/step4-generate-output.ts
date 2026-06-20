@@ -1,5 +1,6 @@
 import { App, Notice, TFile, Vault } from "obsidian";
 import { createLLMClient } from "../ai/llm-client-factory";
+import { createEmbedder } from "../ai/embedder";
 import {
     generateCombinedPage,
     generateCasePageLocal,
@@ -264,7 +265,7 @@ export async function runStep4(
             try {
                 relatedMap = await computeRelatedConcepts(
                     entities.concepts,
-                    client,
+                    createEmbedder(settings),
                     settings.semanticLinkThreshold,
                     5
                 );

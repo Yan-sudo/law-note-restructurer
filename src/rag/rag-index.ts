@@ -1,5 +1,6 @@
 import type { Vault } from "obsidian";
 import type { LLMClient } from "../ai/llm-provider";
+import type { Embedder } from "../ai/embedder";
 import {
     buildRagPrompt,
     chunkMarkdown,
@@ -23,6 +24,8 @@ interface FileEntry {
 
 export interface RagIndex {
     builtAt: string;
+    /** Embedder identity (provider:model); a mismatch forces a full rebuild. */
+    signature: string;
     /** Keyed by vault path so unchanged files can be reused across rebuilds. */
     files: Record<string, FileEntry>;
 }
@@ -48,11 +51,14 @@ export function indexChunkCount(index: RagIndex): number {
  */
 export async function buildIndex(
     vault: Vault,
-    client: LLMClient,
+    embedder: Embedder,
     folderPrefix: string,
+    signature: string,
     existing?: RagIndex | null,
     onProgress?: (done: number, total: number) => void
 ): Promise<RagIndex> {
+    // Only reuse a prior index built with the same embedder (same vector space).
+    const prior = existing && existing.signature === signature ? existing : null;
     const files = vault.getMarkdownFiles().filter((f) => f.path.startsWith(folderPrefix));
 
     const result: Record<string, FileEntry> = {};
@@ -60,7 +66,7 @@ export async function buildIndex(
 
     for (const file of files) {
         const mtime = file.stat.mtime;
-        const prev = existing?.files[file.path];
+        const prev = prior?.files[file.path];
         if (prev && prev.mtime === mtime) {
             result[file.path] = prev; // unchanged → reuse embeddings, no API call
             continue;
@@ -74,7 +80,7 @@ export async function buildIndex(
 
     for (let i = 0; i < pending.length; i += EMBED_BATCH) {
         const batch = pending.slice(i, i + EMBED_BATCH);
-        const embeddings = await client.embedTexts(batch.map((c) => c.text));
+        const embeddings = await embedder.embedTexts(batch.map((c) => c.text));
         batch.forEach((c, j) =>
             result[c.path].chunks.push({ ...c, embedding: embeddings[j] ?? [] })
         );
@@ -82,7 +88,7 @@ export async function buildIndex(
         if (i + EMBED_BATCH < pending.length) await sleep(BATCH_PAUSE_MS);
     }
 
-    return { builtAt: new Date().toISOString(), files: result };
+    return { builtAt: new Date().toISOString(), signature, files: result };
 }
 
 export async function saveIndex(vault: Vault, path: string, index: RagIndex): Promise<void> {
@@ -102,9 +108,14 @@ export async function loadIndex(vault: Vault, path: string): Promise<RagIndex | 
     }
 }
 
-/** Retrieve the most relevant chunks for `question` and have the model answer. */
+/**
+ * Retrieve the most relevant chunks for `question` and have the model answer.
+ * `embedder` embeds the query (must match the index's embedder); `generator`
+ * writes the answer.
+ */
 export async function answerQuestion(
-    client: LLMClient,
+    generator: LLMClient,
+    embedder: Embedder,
     index: RagIndex,
     question: string,
     history: ChatTurn[] = [],
@@ -118,7 +129,7 @@ export async function answerQuestion(
         };
     }
 
-    const [queryVec] = await client.embedTexts([question]);
+    const [queryVec] = await embedder.embedTexts([question]);
     const ranked = rankBySimilarity(
         queryVec ?? [],
         chunks.map((c) => c.embedding),
@@ -130,6 +141,6 @@ export async function answerQuestion(
         return { answer: "No relevant notes found for that question.", sources: [] };
     }
 
-    const answer = await client.generate(buildRagPrompt(question, contexts, history));
+    const answer = await generator.generate(buildRagPrompt(question, contexts, history));
     return { answer, sources: uniqueSources(contexts) };
 }
