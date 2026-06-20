@@ -1,7 +1,16 @@
 import { ItemView, WorkspaceLeaf, setIcon } from "obsidian";
 import type LawNoteRestructurerPlugin from "../main";
+import type { AutoUpdateInterval } from "../types";
 import { listCoursesWithState } from "../pipeline/state-persistence";
 import { formatElapsed, type ProgressState } from "./progress";
+
+const AUTO_OPTIONS: { value: AutoUpdateInterval; label: string }[] = [
+    { value: "off", label: "Auto: off" },
+    { value: "15m", label: "Auto: 15m" },
+    { value: "1h", label: "Auto: hourly" },
+    { value: "6h", label: "Auto: 6h" },
+    { value: "1d", label: "Auto: daily" },
+];
 
 export const HOME_VIEW_TYPE = "law-note-home-view";
 
@@ -139,23 +148,15 @@ export class HomeView extends ItemView {
             run: () => this.plugin.runFullPipeline(),
         });
 
-        // ② Keep updated
+        // ② Keep updated — one row per course: Update now + its own auto-update cadence.
         this.section(c, "② Keep updated / 保持更新");
-        const auto = this.plugin.settings.autoUpdateInterval;
-        if (auto !== "off") {
-            const course = this.plugin.settings.autoUpdateCourse || "(default)";
+        if (hasDb) {
+            for (const course of courses) this.renderCourseRow(c, course);
             c.createDiv({
                 cls: "lnr-home-note",
-                text: `Auto-update: every ${auto} · course: ${course} (change in Settings)`,
+                text: "“Auto” runs an incremental update in the background on that schedule (only when notes changed).",
             });
         }
-        this.action(c, {
-            icon: "refresh-cw",
-            label: "Update now",
-            desc: "Incremental — only new/changed notes",
-            run: () => this.plugin.updateKnowledgeBase(),
-            requiresDb: true,
-        });
 
         // ③ Study & tools
         this.section(c, "③ Study & tools / 学习与工具");
@@ -194,6 +195,29 @@ export class HomeView extends ItemView {
                 text: "Update & study actions unlock once you've built a database.",
             });
         }
+    }
+
+    /** A course row: name + per-course auto-update cadence + "Update now". */
+    private renderCourseRow(parent: HTMLElement, course: string): void {
+        const row = parent.createDiv({ cls: "lnr-course-row" });
+        row.createSpan({ cls: "lnr-course-name", text: course || "(default)" });
+
+        const select = row.createEl("select", { cls: "dropdown lnr-course-auto" });
+        for (const o of AUTO_OPTIONS) {
+            const opt = select.createEl("option", { text: o.label });
+            opt.value = o.value;
+        }
+        select.value = this.plugin.settings.autoUpdateCourses[course] ?? "off";
+        select.addEventListener("change", async () => {
+            const map = { ...this.plugin.settings.autoUpdateCourses };
+            if (select.value === "off") delete map[course];
+            else map[course] = select.value as AutoUpdateInterval;
+            this.plugin.settings.autoUpdateCourses = map;
+            await this.plugin.saveSettings();
+        });
+
+        const update = row.createEl("button", { cls: "lnr-course-update", text: "Update now" });
+        update.addEventListener("click", () => void this.plugin.updateCourseNow(course));
     }
 
     private section(parent: HTMLElement, text: string): void {
