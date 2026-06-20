@@ -776,6 +776,35 @@
     margin: 0 0 var(--size-2-3);
 }
 
+.lnr-course-row {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    padding: var(--size-2-2) var(--size-2-3);
+    margin-bottom: var(--size-2-3);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+}
+
+.lnr-course-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: var(--font-medium);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lnr-course-auto {
+    flex: 0 0 auto;
+    font-size: var(--font-ui-smaller);
+}
+
+.lnr-course-update {
+    flex: 0 0 auto;
+}
+
 .lnr-home-note.lnr-home-ok {
     color: var(--text-success, var(--text-muted));
 }

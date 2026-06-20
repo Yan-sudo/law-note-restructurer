@@ -2,7 +2,6 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type LawNoteRestructurerPlugin from "./main";
 import { createEmbedder } from "./ai/embedder";
 import { estimateCostUSD, formatTokens, formatUSD, isLocalGeneration } from "./ai/cost";
-import { listCoursesWithState } from "./pipeline/state-persistence";
 
 export class LawNoteSettingTab extends PluginSettingTab {
     plugin: LawNoteRestructurerPlugin;
@@ -422,43 +421,15 @@ export class LawNoteSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("Auto-update database")
             .setDesc(
-                "Periodically run an incremental update in the background (only does work when " +
-                "notes changed). Progress shows in the status bar / side panel. (后台自动增量更新)"
+                "Auto-update is now per-course. Open the Law Notes side panel → " +
+                "② Keep updated, and set each course's “Auto” schedule there. " +
+                "(自动更新已按课程设置——在 Law Notes 侧栏「②保持更新」里逐课程配置)"
             )
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption("off", "Off")
-                    .addOption("15m", "Every 15 minutes")
-                    .addOption("1h", "Every hour")
-                    .addOption("6h", "Every 6 hours")
-                    .addOption("1d", "Every day")
-                    .setValue(this.plugin.settings.autoUpdateInterval)
-                    .onChange(async (value) => {
-                        this.plugin.settings.autoUpdateInterval =
-                            value as "off" | "15m" | "1h" | "6h" | "1d";
-                        await this.plugin.saveSettings();
-                        this.display(); // show/hide the course picker
-                    })
+            .addButton((btn) =>
+                btn.setButtonText("Open panel").onClick(() => {
+                    void this.plugin.openControlPanel();
+                })
             );
-
-        if (this.plugin.settings.autoUpdateInterval !== "off") {
-            const courses = listCoursesWithState(this.app.vault, this.plugin.settings.outputFolder);
-            new Setting(containerEl)
-                .setName("Auto-update course")
-                .setDesc("Which course the background updater targets.")
-                .addDropdown((dropdown) => {
-                    dropdown.addOption("", "Default output folder");
-                    for (const name of courses) {
-                        if (name) dropdown.addOption(name, name);
-                    }
-                    dropdown
-                        .setValue(this.plugin.settings.autoUpdateCourse)
-                        .onChange(async (value) => {
-                            this.plugin.settings.autoUpdateCourse = value;
-                            await this.plugin.saveSettings();
-                        });
-                });
-        }
 
         // --- Link Resolver Configuration ---
         new Setting(containerEl).setName("Link resolver (链接解析)").setHeading();

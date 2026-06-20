@@ -1,5 +1,5 @@
 import { Notice, Plugin, TFile } from "obsidian";
-import { DEFAULT_SETTINGS, type LawNoteSettings } from "./types";
+import { DEFAULT_SETTINGS, type AutoUpdateInterval, type LawNoteSettings } from "./types";
 import { LawNoteSettingTab } from "./settings";
 import { PipelineOrchestrator } from "./pipeline/pipeline-orchestrator";
 import { runLinkResolver } from "./link-resolver/resolver-orchestrator";
@@ -40,6 +40,8 @@ export default class LawNoteRestructurerPlugin extends Plugin {
     readonly progress = new ProgressController();
     private statusBarEl: HTMLElement | null = null;
     private autoUpdateTimer: number | null = null;
+    /** Per-course timestamp of the last background auto-update. */
+    private autoUpdateLastRun: Record<string, number> = {};
 
     async onload(): Promise<void> {
         await this.loadSettings();
@@ -234,6 +236,11 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         await this.revealView(HOME_VIEW_TYPE);
     }
 
+    /** Public entry point used by the settings tab to open the control panel. */
+    openControlPanel(): void {
+        void this.openHomePanel();
+    }
+
     private get ragIndexPath(): string {
         return `${this.settings.outputFolder}/.rag-index.json`;
     }
@@ -383,11 +390,37 @@ export default class LawNoteRestructurerPlugin extends Plugin {
 
     async loadSettings(): Promise<void> {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // Migrate the old single-course auto-update setting into the per-course map.
+        const legacy = this.settings.autoUpdateInterval;
+        if (legacy && legacy !== "off") {
+            const course = this.settings.autoUpdateCourse ?? "";
+            if (!this.settings.autoUpdateCourses[course]) {
+                this.settings.autoUpdateCourses = {
+                    ...this.settings.autoUpdateCourses,
+                    [course]: legacy,
+                };
+            }
+            this.settings.autoUpdateInterval = "off";
+            await this.saveData(this.settings);
+        }
     }
 
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
         this.setupAutoUpdate();
+    }
+
+    /** Run an incremental update for one course directly (shown, minimizable). */
+    async updateCourseNow(courseName: string): Promise<void> {
+        if (this.missingGeminiKey()) {
+            new Notice("Please set your Gemini API key in Settings first.");
+            return;
+        }
+        const orchestrator = new PipelineOrchestrator(this.app, this.settings, () =>
+            this.saveSettings()
+        );
+        this.pipeline = orchestrator;
+        await orchestrator.incrementalForCourse(courseName, { silent: false });
     }
 
     /** Render the bottom status-bar item from the shared progress state. */
@@ -406,30 +439,49 @@ export default class LawNoteRestructurerPlugin extends Plugin {
         el.setText(`${icon} ${s.title}${pct}${elapsed}`);
     }
 
-    /** (Re)arm the background auto-update timer from settings. */
+    /**
+     * (Re)arm the background auto-update timer. A single 1-minute ticker drives
+     * every enabled course on its own cadence (see autoUpdateTick).
+     */
     private setupAutoUpdate(): void {
         if (this.autoUpdateTimer !== null) {
             window.clearInterval(this.autoUpdateTimer);
             this.autoUpdateTimer = null;
         }
-        const ms = autoUpdateIntervalMs(this.settings.autoUpdateInterval);
-        if (ms <= 0) return;
-        this.autoUpdateTimer = window.setInterval(() => void this.autoUpdateTick(), ms);
+        const enabled = Object.entries(this.settings.autoUpdateCourses).filter(
+            ([, interval]) => autoUpdateIntervalMs(interval) > 0
+        );
+        if (enabled.length === 0) return;
+        // Defer the first run of each newly-enabled course by one full interval.
+        const now = Date.now();
+        for (const [course] of enabled) {
+            if (this.autoUpdateLastRun[course] === undefined) this.autoUpdateLastRun[course] = now;
+        }
+        this.autoUpdateTimer = window.setInterval(() => void this.autoUpdateTick(), 60 * 1000);
         this.registerInterval(this.autoUpdateTimer);
     }
 
-    /** Background incremental update of the designated course (no prompts). */
+    /** Background incremental update of any course whose interval has elapsed. */
     private async autoUpdateTick(): Promise<void> {
         if (this.progress.isActive() || this.missingGeminiKey()) return;
-        // Force auto-accept so the background run never blocks on a review modal.
-        const settings = { ...this.settings, autoAcceptReview: true };
-        const orchestrator = new PipelineOrchestrator(this.app, settings, () => this.saveSettings());
-        try {
-            await orchestrator.incrementalForCourse(this.settings.autoUpdateCourse, {
-                silent: true,
-            });
-        } catch (error) {
-            console.warn("[law-restructurer] Auto-update failed:", error);
+        const now = Date.now();
+        for (const [course, interval] of Object.entries(this.settings.autoUpdateCourses)) {
+            const ms = autoUpdateIntervalMs(interval);
+            if (ms <= 0) continue;
+            if (now - (this.autoUpdateLastRun[course] ?? 0) < ms) continue;
+
+            this.autoUpdateLastRun[course] = now;
+            // Force auto-accept so the background run never blocks on a review modal.
+            const settings = { ...this.settings, autoAcceptReview: true };
+            const orchestrator = new PipelineOrchestrator(this.app, settings, () =>
+                this.saveSettings()
+            );
+            try {
+                await orchestrator.incrementalForCourse(course, { silent: true });
+            } catch (error) {
+                console.warn("[law-restructurer] Auto-update failed:", error);
+            }
+            return; // one course per tick — others run on the next minute
         }
     }
 
@@ -441,7 +493,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
 }
 
 /** Auto-update interval in milliseconds (0 = off). */
-function autoUpdateIntervalMs(interval: LawNoteSettings["autoUpdateInterval"]): number {
+function autoUpdateIntervalMs(interval: AutoUpdateInterval | undefined): number {
     switch (interval) {
         case "15m":
             return 15 * 60 * 1000;

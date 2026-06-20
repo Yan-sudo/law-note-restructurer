@@ -2,6 +2,9 @@
 // SETTINGS
 // ============================================================
 
+/** Background auto-update cadence for a course. */
+export type AutoUpdateInterval = "off" | "15m" | "1h" | "6h" | "1d";
+
 export interface LawNoteSettings {
     geminiApiKey: string;
     modelName: string;
@@ -48,10 +51,15 @@ export interface LawNoteSettings {
     lifetimeTokensUsed: number;
     /** Default verbosity for Ask My Notes answers. */
     askLength: "brief" | "standard" | "detailed";
-    /** How often to auto-update the knowledge base in the background. */
-    autoUpdateInterval: "off" | "15m" | "1h" | "6h" | "1d";
-    /** Course the auto-update targets ("" = the default output folder). */
-    autoUpdateCourse: string;
+    /**
+     * Per-course background auto-update schedule: course name → interval
+     * ("" key = the default output folder). Absent or "off" means no auto-update.
+     */
+    autoUpdateCourses: Record<string, AutoUpdateInterval>;
+    /** @deprecated single-course schedule; migrated into autoUpdateCourses. */
+    autoUpdateInterval?: AutoUpdateInterval;
+    /** @deprecated single-course target; migrated into autoUpdateCourses. */
+    autoUpdateCourse?: string;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -85,8 +93,7 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     autoAcceptReview: false,
     lifetimeTokensUsed: 0,
     askLength: "standard",
-    autoUpdateInterval: "off",
-    autoUpdateCourse: "",
+    autoUpdateCourses: {},
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,

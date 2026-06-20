@@ -104,7 +104,7 @@ Open Settings → Law Note Restructurer:
 | Auto-accept review | Skip the review modals and generate immediately (unattended) | Off |
 | Usage so far | Cost meter — cumulative tokens & rough $ estimate, resettable | — |
 | Answer length | Default Ask My Notes verbosity: brief / standard / detailed | Standard |
-| Auto-update database | Background incremental update of a chosen course every 15m/1h/6h/1d | Off |
+| Auto-update database | **Per-course** background incremental update (set in the side panel → ② Keep updated): off / 15m / 1h / 6h / daily | Off |
 | Semantic Dedup | Merge same-meaning concepts via embeddings (extra cost) | Off |
 | Semantic Related Links | Append "Related Concepts" to concept pages via embeddings | Off |
 | Generate Flashcards | Spaced Repetition + Anki export from rules/holdings | On |
