@@ -14,6 +14,7 @@ import { computeRelatedConcepts, renderRelatedSection, type RelatedConcept } fro
 import { generateOutlinePage } from "../generators/outline-generator";
 import { withPreservedNotes } from "../utils/user-notes";
 import { affectedConceptNames, type EntityDiff } from "./entity-diff";
+import type { TokenUsage } from "../ai/cost";
 import { ProgressModal } from "../ui/progress-modal";
 import type {
     ExtractedEntities,
@@ -212,7 +213,8 @@ export async function runStep4(
     matrix: RelationshipMatrix,
     outputFolderOverride?: string,
     courseName?: string,
-    diff?: EntityDiff
+    diff?: EntityDiff,
+    usage?: TokenUsage
 ): Promise<string[]> {
     const client = createLLMClient(settings);
     const outputFolder = outputFolderOverride ?? settings.outputFolder;
@@ -473,6 +475,7 @@ export async function runStep4(
             await app.workspace.getLeaf().openFile(outlineFile);
         }
 
+        if (usage) usage.tokens += client.getTotalTokensUsed();
         return generatedFiles;
     } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
@@ -483,6 +486,7 @@ export async function runStep4(
             const origClose = progressModal.onClose.bind(progressModal);
             progressModal.onClose = () => { origClose(); resolve(); };
         });
+        if (usage) usage.tokens += client.getTotalTokensUsed();
         return generatedFiles;
     }
 }

@@ -14,6 +14,7 @@ import type {
     SourceDocument,
 } from "../types";
 import { estimateTokens } from "../types";
+import type { TokenUsage } from "../ai/cost";
 
 /**
  * Max source tokens per extraction chunk.
@@ -26,7 +27,8 @@ const MAX_SOURCE_TOKENS_PER_CHUNK = 40000;
 export async function runStep2(
     app: App,
     settings: LawNoteSettings,
-    documents: SourceDocument[]
+    documents: SourceDocument[],
+    usage?: TokenUsage
 ): Promise<ExtractedEntities | null> {
     const client = createLLMClient(settings);
 
@@ -92,6 +94,7 @@ export async function runStep2(
     // Metadata is owned by code, not the model: record the real source files,
     // timestamp, model used, and actual token usage reported by the API.
     const tokensUsed = client.getTotalTokensUsed();
+    if (usage) usage.tokens += tokensUsed;
     entities.metadata = {
         sourceDocuments: documents.map((d) => d.filename),
         extractionTimestamp: new Date().toISOString(),
@@ -124,6 +127,11 @@ export async function runStep2(
         }
     }
 
+    // Unattended mode: skip the review modal and generate immediately.
+    if (settings.autoAcceptReview) {
+        return entities;
+    }
+
     // User review
     return new Promise((resolve) => {
         const reviewModal = new EntityReviewModal(
@@ -132,7 +140,7 @@ export async function runStep2(
             (confirmed) => resolve(confirmed),
             () => {
                 // Re-extract: recursively call this step
-                runStep2(app, settings, documents).then(resolve);
+                runStep2(app, settings, documents, usage).then(resolve);
             },
             () => resolve(null)
         );

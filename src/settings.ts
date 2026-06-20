@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type LawNoteRestructurerPlugin from "./main";
 import { createEmbedder } from "./ai/embedder";
+import { estimateCostUSD, formatTokens, formatUSD, isLocalGeneration } from "./ai/cost";
 
 export class LawNoteSettingTab extends PluginSettingTab {
     plugin: LawNoteRestructurerPlugin;
@@ -239,6 +240,39 @@ export class LawNoteSettingTab extends PluginSettingTab {
                         this.plugin.settings.concurrency = value;
                         await this.plugin.saveSettings();
                     })
+            );
+
+        new Setting(containerEl)
+            .setName("Auto-accept review")
+            .setDesc(
+                "Skip the entity & relationship review modals and generate immediately. " +
+                "Faster and fully unattended — turn off if you like to edit before generating. (自动确认，跳过审阅)"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.autoAcceptReview)
+                    .onChange(async (value) => {
+                        this.plugin.settings.autoAcceptReview = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        // Cost meter: cumulative tokens billed across every run.
+        const lifetime = this.plugin.settings.lifetimeTokensUsed ?? 0;
+        const costDesc = isLocalGeneration(this.plugin.settings)
+            ? `${formatTokens(lifetime)} tokens so far (current provider is local — free).`
+            : `${formatTokens(lifetime)} tokens so far · ~${formatUSD(
+                  estimateCostUSD(this.plugin.settings.modelName, lifetime)
+              )} (rough estimate).`;
+        new Setting(containerEl)
+            .setName("Usage so far (cost meter)")
+            .setDesc(costDesc)
+            .addButton((btn) =>
+                btn.setButtonText("Reset").onClick(async () => {
+                    this.plugin.settings.lifetimeTokensUsed = 0;
+                    await this.plugin.saveSettings();
+                    this.display();
+                })
             );
 
         new Setting(containerEl)

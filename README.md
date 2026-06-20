@@ -101,6 +101,8 @@ Open Settings → Law Note Restructurer:
 | Output Folder | Where to save generated files | `LawNotes/Generated` |
 | Language | Chinese, English, or Mixed | Mixed |
 | Concurrency | Parallel API calls (1–10) | 5 |
+| Auto-accept review | Skip the review modals and generate immediately (unattended) | Off |
+| Usage so far | Cost meter — cumulative tokens & rough $ estimate, resettable | — |
 | Semantic Dedup | Merge same-meaning concepts via embeddings (extra cost) | Off |
 | Semantic Related Links | Append "Related Concepts" to concept pages via embeddings | Off |
 | Generate Flashcards | Spaced Repetition + Anki export from rules/holdings | On |

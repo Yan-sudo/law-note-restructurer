@@ -334,7 +334,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
-        this.pipeline = new PipelineOrchestrator(this.app, this.settings);
+        this.pipeline = new PipelineOrchestrator(this.app, this.settings, () => this.saveSettings());
         this.pipeline.start(stopAfter);
     }
 
@@ -343,7 +343,7 @@ export default class LawNoteRestructurerPlugin extends Plugin {
             new Notice("Please set your Gemini API key in Settings first.");
             return;
         }
-        this.pipeline = new PipelineOrchestrator(this.app, this.settings);
+        this.pipeline = new PipelineOrchestrator(this.app, this.settings, () => this.saveSettings());
         this.pipeline.startIncremental();
     }
 

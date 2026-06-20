@@ -42,6 +42,10 @@ export interface LawNoteSettings {
     enableSemanticLinks: boolean;
     /** Cosine-similarity threshold (0–1) for two concepts to be "related". */
     semanticLinkThreshold: number;
+    /** Skip the entity review modal and generate immediately (unattended runs). */
+    autoAcceptReview: boolean;
+    /** Cumulative API tokens billed across every run (cost meter). */
+    lifetimeTokensUsed: number;
     // Link Resolver settings
     courtListenerApiToken: string;
     resolvedLinksFolder: string;
@@ -72,6 +76,8 @@ export const DEFAULT_SETTINGS: LawNoteSettings = {
     enableFlashcards: true,
     enableSemanticLinks: false,
     semanticLinkThreshold: 0.75,
+    autoAcceptReview: false,
+    lifetimeTokensUsed: 0,
     courtListenerApiToken: "",
     resolvedLinksFolder: "",
     resolverRequestDelayMs: 1500,
